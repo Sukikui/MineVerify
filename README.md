@@ -11,9 +11,9 @@ Lightweight PaperMC plugin allowing apps to verify Minecraft players through in-
 MineVerify lets external apps verify that a Minecraft account is controlled by a real player
 connected to your server.
 
-The app creates a verification request, MineVerify generates a temporary code, and the player
-validates it in game with `/mineverify <code>`. MineVerify then sends the verified Minecraft UUID
-and username back to the app.
+The app creates a verification request, MineVerify generates and owns the temporary code lifecycle,
+and the player validates it in game with `/mineverify <code>`. MineVerify then sends either the
+verified Minecraft identity or an expiration event back to the app.
 
 The plugin only makes outbound HTTPS requests to configured apps. Apps do not need to call the
 Minecraft server directly.
@@ -25,7 +25,7 @@ Minecraft server directly.
 - Minecraft UUID and username read directly from the connected player
 - Multi-app configuration with one URL, token, display name, and polling interval per app
 - Outbound-only app communication; no public HTTP API exposed by the plugin
-- One-time code validation with expiration and in-memory cleanup
+- Plugin-owned code lifecycle with validation, expiration, retries, and in-memory cleanup
 - Localized in-game messages with the same language set as PlayerCoordsAPI
 - BiomeMap-style chat messages with colored prefix, warnings, success, and errors
 
@@ -64,7 +64,7 @@ linking:
 | `apps.<id>.token` | Required | Bearer token used by MineVerify when calling this app. |
 | `apps.<id>.poll-interval-seconds` | `3` | How often MineVerify checks this app for pending requests. |
 | `linking.code-ttl-seconds` | `300` | Generated code validity duration. |
-| `linking.cleanup-interval-seconds` | `60` | Expired in-memory request cleanup interval. |
+| `linking.cleanup-interval-seconds` | `60` | Pending code expiration and reported terminal request cleanup interval. |
 
 ## 🕹 Command Usage
 
@@ -77,17 +77,18 @@ identity is read from the connected player context.
 
 ## 🔁 How It Works
 
-MineVerify runs an outbound polling flow. The app creates a request, MineVerify fetches it,
-generates the code, and later validates the code from the connected Minecraft player.
+MineVerify runs an outbound polling flow. The app creates a request and exposes it. MineVerify
+fetches it, generates the code, owns its lifecycle, and sends app events when the code is created,
+validated, or expired.
 
 ### 1. The app creates a request
 
-The app creates a request for its logged-in user.
+The app creates a request for its logged-in user and keeps the relation with its own user id.
 
 ```json
 {
   "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
-  "state": "pending_code"
+  "externalUserId": "user_123"
 }
 ```
 
@@ -112,7 +113,7 @@ The app returns requests waiting for a MineVerify-generated code.
 }
 ```
 
-### 3. MineVerify generates the code
+### 3. MineVerify creates the plugin-side request
 
 MineVerify generates a temporary readable code.
 
@@ -120,7 +121,9 @@ MineVerify generates a temporary readable code.
 K7M9-P2Q4
 ```
 
-It stores the code in memory with the owning app id, request id, and expiration timestamp.
+It stores the code in memory with the owning app id, request id, expiration timestamp, and local
+lifecycle data. From this point, MineVerify owns whether the request is active, validated, or
+expired.
 
 ### 4. MineVerify sends the code to the app
 
@@ -182,9 +185,30 @@ Content-Type: application/json
 }
 ```
 
-### 7. The app stores the link
+### 7. If the code expires, MineVerify sends the expiration to the app
 
-The app marks the request as validated and links its own user to the verified Minecraft account.
+If the player does not validate before `expiresAt`, MineVerify expires the request and sends:
+
+```http
+POST https://my-app.com/api/mineverify/expired
+Authorization: Bearer <app-token>
+Content-Type: application/json
+```
+
+```json
+{
+  "appId": "my-app",
+  "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
+  "code": "K7M9-P2Q4",
+  "expiresAt": "2026-06-04T16:05:00Z",
+  "expiredAt": "2026-06-04T16:05:00Z"
+}
+```
+
+### 8. The app stores the result
+
+On `validated`, the app links its own user to the verified Minecraft account. On `expired`, it
+stores the expiration and lets the user start again.
 
 Player success message:
 

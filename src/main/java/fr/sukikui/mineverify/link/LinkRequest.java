@@ -18,7 +18,10 @@ public final class LinkRequest {
   private UUID minecraftUuid;
   private String minecraftName;
   private Instant validatedAt;
+  private Instant expiredAt;
+  private boolean codeCreatedReported;
   private boolean validationReported;
+  private boolean expirationReported;
 
   /**
    * Creates a pending link request.
@@ -53,10 +56,25 @@ public final class LinkRequest {
   }
 
   /**
+   * Marks the remote app code-created report as delivered.
+   */
+  public synchronized void markCodeCreatedReported() {
+    codeCreatedReported = true;
+  }
+
+  /**
+   * Marks the remote app expiration report as delivered.
+   */
+  public synchronized void markExpirationReported() {
+    expirationReported = true;
+  }
+
+  /**
    * Expires the request when its deadline has passed.
    */
   public synchronized boolean expireIfNeeded(Instant now) {
     if (state == LinkRequestState.PENDING_VALIDATION && isExpired(now)) {
+      expiredAt = expiresAt;
       state = LinkRequestState.EXPIRED;
       return true;
     }
@@ -127,9 +145,38 @@ public final class LinkRequest {
   }
 
   /**
+   * Returns the expiration timestamp once the request has expired.
+   */
+  public synchronized Optional<Instant> expiredAt() {
+    return Optional.ofNullable(expiredAt);
+  }
+
+  /**
+   * Returns true when the generated code has not yet been reported to the remote app.
+   */
+  public synchronized boolean needsCodeCreatedReport() {
+    return state == LinkRequestState.PENDING_VALIDATION && !codeCreatedReported;
+  }
+
+  /**
    * Returns true when validation has not yet been reported to the remote app.
    */
   public synchronized boolean needsValidationReport() {
     return state == LinkRequestState.VALIDATED && !validationReported;
+  }
+
+  /**
+   * Returns true when expiration has not yet been reported to the remote app.
+   */
+  public synchronized boolean needsExpirationReport() {
+    return state == LinkRequestState.EXPIRED && !expirationReported;
+  }
+
+  /**
+   * Returns true when a terminal request can be removed from memory.
+   */
+  public synchronized boolean isReportedTerminal() {
+    return (state == LinkRequestState.VALIDATED && validationReported)
+        || (state == LinkRequestState.EXPIRED && expirationReported);
   }
 }

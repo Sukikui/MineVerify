@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Thread-safe in-memory store for active MineVerify requests.
+ * Thread-safe in-memory store for MineVerify request lifecycle events.
  */
 public final class LinkRequestStore {
 
@@ -68,6 +68,19 @@ public final class LinkRequestStore {
   }
 
   /**
+   * Returns generated code reports that still need to be sent to a remote app.
+   */
+  public synchronized List<LinkRequest> pendingCodeCreatedReports(String appId) {
+    List<LinkRequest> requests = new ArrayList<>();
+    for (LinkRequest request : requestsByCode.values()) {
+      if (request.appId().equals(appId) && request.needsCodeCreatedReport()) {
+        requests.add(request);
+      }
+    }
+    return requests;
+  }
+
+  /**
    * Returns validated requests that still need to be sent to a remote app.
    */
   public synchronized List<LinkRequest> pendingValidationReports(String appId) {
@@ -81,25 +94,45 @@ public final class LinkRequestStore {
   }
 
   /**
-   * Removes expired requests and returns the number removed.
+   * Returns expired requests that still need to be sent to a remote app.
    */
-  public synchronized int removeExpired(Instant now) {
-    List<String> expiredCodes = new ArrayList<>();
-    for (Map.Entry<String, LinkRequest> entry : requestsByCode.entrySet()) {
-      LinkRequest request = entry.getValue();
-      request.expireIfNeeded(now);
-      if (request.state() == LinkRequestState.EXPIRED) {
-        expiredCodes.add(entry.getKey());
+  public synchronized List<LinkRequest> pendingExpirationReports(String appId) {
+    List<LinkRequest> requests = new ArrayList<>();
+    for (LinkRequest request : requestsByCode.values()) {
+      if (request.appId().equals(appId) && request.needsExpirationReport()) {
+        requests.add(request);
       }
     }
+    return requests;
+  }
 
-    for (String code : expiredCodes) {
-      LinkRequest request = requestsByCode.remove(code);
-      if (request != null) {
-        codeByRemoteRequest.remove(remoteKey(request.appId(), request.requestId()));
+  /**
+   * Expires pending requests and returns the number of newly expired requests.
+   */
+  public synchronized int expirePending(Instant now) {
+    int expired = 0;
+    for (LinkRequest request : requestsByCode.values()) {
+      if (request.expireIfNeeded(now)) {
+        expired++;
       }
     }
-    return expiredCodes.size();
+    return expired;
+  }
+
+  /**
+   * Removes terminal requests already reported to remote apps.
+   */
+  public synchronized int removeReportedTerminals() {
+    List<String> removableCodes = new ArrayList<>();
+    for (Map.Entry<String, LinkRequest> entry : requestsByCode.entrySet()) {
+      if (entry.getValue().isReportedTerminal()) {
+        removableCodes.add(entry.getKey());
+      }
+    }
+    for (String code : removableCodes) {
+      removeByCode(code);
+    }
+    return removableCodes.size();
   }
 
   /**
@@ -111,5 +144,12 @@ public final class LinkRequestStore {
 
   private static String remoteKey(String appId, String requestId) {
     return appId + '\n' + requestId;
+  }
+
+  private void removeByCode(String code) {
+    LinkRequest request = requestsByCode.remove(code);
+    if (request != null) {
+      codeByRemoteRequest.remove(remoteKey(request.appId(), request.requestId()));
+    }
   }
 }

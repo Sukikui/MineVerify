@@ -68,6 +68,24 @@ public final class RemoteAppPoller {
   }
 
   /**
+   * Reports a generated code to its owning app.
+   */
+  public void reportCodeCreated(LinkRequest request) {
+    RemoteAppConfig app = config.apps().get(request.appId());
+    if (app == null || !request.needsCodeCreatedReport()) {
+      return;
+    }
+
+    try {
+      remoteClient.sendCodeCreated(app, request);
+      request.markCodeCreatedReported();
+    } catch (RemoteAppException exception) {
+      logger.warning("Unable to report MineVerify code for app " + app.id() + ": "
+          + exception.getMessage());
+    }
+  }
+
+  /**
    * Reports a validated request to its owning app.
    */
   public void reportValidation(LinkRequest request) {
@@ -85,16 +103,37 @@ public final class RemoteAppPoller {
     }
   }
 
+  /**
+   * Reports an expired request to its owning app.
+   */
+  public void reportExpiration(LinkRequest request) {
+    RemoteAppConfig app = config.apps().get(request.appId());
+    if (app == null || !request.needsExpirationReport()) {
+      return;
+    }
+
+    try {
+      remoteClient.sendExpired(app, request);
+      request.markExpirationReported();
+    } catch (RemoteAppException exception) {
+      logger.warning("Unable to report MineVerify expiration for app " + app.id() + ": "
+          + exception.getMessage());
+    }
+  }
+
   private void poll(RemoteAppConfig app) {
     pollPendingRequests(app);
+    expirePendingRequests();
+    reportPendingCodeCreated(app);
     reportPendingValidations(app);
+    reportPendingExpirations(app);
+    requestStore.removeReportedTerminals();
   }
 
   private void pollPendingRequests(RemoteAppConfig app) {
     try {
       for (PendingRemoteRequest pending : remoteClient.fetchPendingRequests(app)) {
-        LinkRequest request = findOrCreateRequest(pending);
-        remoteClient.sendCodeCreated(app, request);
+        findOrCreateRequest(pending);
       }
     } catch (RemoteAppException exception) {
       logger.warning("Unable to poll MineVerify app " + app.id() + ": " + exception.getMessage());
@@ -114,9 +153,25 @@ public final class RemoteAppPoller {
         pending.appId(), pending.requestId(), code, now.plus(config.codeTtl()), now);
   }
 
+  private void expirePendingRequests() {
+    requestStore.expirePending(Instant.now());
+  }
+
+  private void reportPendingCodeCreated(RemoteAppConfig app) {
+    for (LinkRequest request : requestStore.pendingCodeCreatedReports(app.id())) {
+      reportCodeCreated(request);
+    }
+  }
+
   private void reportPendingValidations(RemoteAppConfig app) {
     for (LinkRequest request : requestStore.pendingValidationReports(app.id())) {
       reportValidation(request);
+    }
+  }
+
+  private void reportPendingExpirations(RemoteAppConfig app) {
+    for (LinkRequest request : requestStore.pendingExpirationReports(app.id())) {
+      reportExpiration(request);
     }
   }
 

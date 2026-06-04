@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import fr.sukikui.mineverify.config.RemoteAppConfig;
 import fr.sukikui.mineverify.link.LinkRequest;
@@ -12,6 +13,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,8 @@ public final class RemoteAppClient {
   private static final String PENDING_REQUESTS_PATH = "/api/mineverify/pending-requests";
   private static final String CODE_CREATED_PATH = "/api/mineverify/code-created";
   private static final String VALIDATED_PATH = "/api/mineverify/validated";
+  private static final String EXPIRED_PATH = "/api/mineverify/expired";
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
   private final HttpClient httpClient;
   private final Gson gson = new Gson();
@@ -79,6 +83,22 @@ public final class RemoteAppClient {
     postJson(app, VALIDATED_PATH, payload, "send validation");
   }
 
+  /**
+   * Sends an expired MineVerify request to its remote app.
+   */
+  public void sendExpired(RemoteAppConfig app, LinkRequest request)
+      throws RemoteAppException {
+    JsonObject payload = new JsonObject();
+    payload.addProperty("appId", request.appId());
+    payload.addProperty("requestId", request.requestId());
+    payload.addProperty("code", request.code());
+    payload.addProperty("expiresAt", DateTimeFormatter.ISO_INSTANT.format(request.expiresAt()));
+    payload.addProperty("expiredAt", DateTimeFormatter.ISO_INSTANT.format(
+        request.expiredAt().orElse(request.expiresAt())));
+
+    postJson(app, EXPIRED_PATH, payload, "send expiration");
+  }
+
   private void postJson(
       RemoteAppConfig app, String path, JsonObject payload, String operation)
       throws RemoteAppException {
@@ -93,6 +113,7 @@ public final class RemoteAppClient {
 
   private HttpRequest.Builder baseRequest(RemoteAppConfig app, String path) {
     return HttpRequest.newBuilder(URI.create(app.endpoint(path)))
+        .timeout(REQUEST_TIMEOUT)
         .header("Authorization", "Bearer " + app.token());
   }
 
@@ -134,7 +155,7 @@ public final class RemoteAppClient {
         }
       }
       return pending;
-    } catch (IllegalStateException exception) {
+    } catch (IllegalStateException | JsonParseException exception) {
       throw new RemoteAppException("Invalid pending request response for app " + app.id(),
           exception);
     }

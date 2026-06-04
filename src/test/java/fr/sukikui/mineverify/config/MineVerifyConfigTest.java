@@ -12,10 +12,10 @@ class MineVerifyConfigTest {
   @Test
   void loadsConfiguredApps() {
     YamlConfiguration yaml = new YamlConfiguration();
-    yaml.set("apps.pmc-map.name", "PMC Map");
-    yaml.set("apps.pmc-map.base-url", "https://pmc-map.example.com/");
-    yaml.set("apps.pmc-map.token", "pmc-token");
-    yaml.set("apps.pmc-map.poll-interval-seconds", 5);
+    yaml.set("apps.my-app.name", "My App");
+    yaml.set("apps.my-app.base-url", "https://my-app.example.com/");
+    yaml.set("apps.my-app.token", "my-app-token");
+    yaml.set("apps.my-app.poll-interval-seconds", 5);
     yaml.set("apps.another-app.base-url", "https://another.example.com");
     yaml.set("apps.another-app.token", "another-token");
     yaml.set("linking.code-ttl-seconds", 120);
@@ -25,10 +25,10 @@ class MineVerifyConfigTest {
     MineVerifyConfig config = MineVerifyConfig.load(yaml);
 
     assertEquals(2, config.apps().size());
-    assertEquals("PMC Map", config.apps().get("pmc-map").name());
-    assertEquals("https://pmc-map.example.com", config.apps().get("pmc-map").baseUrl());
-    assertEquals("pmc-token", config.apps().get("pmc-map").token());
-    assertEquals(Duration.ofSeconds(5), config.apps().get("pmc-map").pollInterval());
+    assertEquals("My App", config.apps().get("my-app").name());
+    assertEquals("https://my-app.example.com", config.apps().get("my-app").baseUrl());
+    assertEquals("my-app-token", config.apps().get("my-app").token());
+    assertEquals(Duration.ofSeconds(5), config.apps().get("my-app").pollInterval());
     assertEquals(Duration.ofSeconds(120), config.codeTtl());
     assertEquals(Duration.ofSeconds(30), config.cleanupInterval());
     assertEquals("fr_fr", config.messages().language());

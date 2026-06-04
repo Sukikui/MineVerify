@@ -13,8 +13,8 @@ class MineVerifyMessagesTest {
 
     assertEquals("en_us", messages.language());
     assertEquals("Usage: /mineverify <code>", messages.usage());
-    assertEquals("Code accepted for PMC Map. The app will update shortly.",
-        messages.accepted("PMC Map"));
+    assertEquals("Code accepted for My App. The app will update shortly.",
+        messages.accepted("My App"));
   }
 
   @Test

@@ -34,7 +34,7 @@ public final class MineVerify extends JavaPlugin {
     poller = new RemoteAppPoller(config, requestStore, codeGenerator, remoteClient, getLogger());
     poller.start(this);
 
-    registerCommand(config, remoteClient);
+    registerCommand(config);
     startCleanup(config);
 
     if (config.apps().isEmpty()) {
@@ -52,7 +52,7 @@ public final class MineVerify extends JavaPlugin {
     }
   }
 
-  private void registerCommand(MineVerifyConfig config, RemoteAppClient remoteClient) {
+  private void registerCommand(MineVerifyConfig config) {
     MineVerifyCommand commandHandler =
         new MineVerifyCommand(
             config.messages(),
@@ -71,7 +71,10 @@ public final class MineVerify extends JavaPlugin {
             .getScheduler()
             .runTaskTimerAsynchronously(
                 this,
-                () -> requestStore.removeExpired(Instant.now()),
+                () -> {
+                  requestStore.expirePending(Instant.now());
+                  requestStore.removeReportedTerminals();
+                },
                 intervalTicks,
                 intervalTicks);
   }

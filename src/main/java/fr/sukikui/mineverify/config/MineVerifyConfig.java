@@ -59,7 +59,7 @@ public final class MineVerifyConfig {
   }
 
   /**
-   * Returns expired request cleanup interval.
+   * Returns lifecycle cleanup interval.
    */
   public Duration cleanupInterval() {
     return cleanupInterval;

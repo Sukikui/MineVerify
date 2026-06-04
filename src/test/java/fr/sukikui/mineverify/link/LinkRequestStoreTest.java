@@ -19,16 +19,16 @@ class LinkRequestStoreTest {
   void storesRequestsByRemoteAppAndRequestId() {
     LinkRequestStore store = new LinkRequestStore();
 
-    LinkRequest request = store.store("pmc-map", "request-1", "K7M9-P2Q4", later(), NOW);
+    LinkRequest request = store.store("my-app", "request-1", "K7M9-P2Q4", later(), NOW);
 
-    assertEquals(Optional.of(request), store.findByRemoteRequest("pmc-map", "request-1"));
+    assertEquals(Optional.of(request), store.findByRemoteRequest("my-app", "request-1"));
     assertEquals(Optional.empty(), store.findByRemoteRequest("another-app", "request-1"));
   }
 
   @Test
   void validatesCodeOnlyOnce() {
     LinkRequestStore store = new LinkRequestStore();
-    store.store("pmc-map", "request-1", "K7M9-P2Q4", later(), NOW);
+    store.store("my-app", "request-1", "K7M9-P2Q4", later(), NOW);
 
     Optional<LinkRequest> validated =
         store.validateCode("k7m9-p2q4", PLAYER_UUID, "PlayerName", NOW.plusSeconds(10));
@@ -42,28 +42,69 @@ class LinkRequestStoreTest {
   }
 
   @Test
-  void exposesUnreportedValidatedRequestsByApp() {
+  void exposesUnreportedCodeCreatedRequestsByApp() {
     LinkRequestStore store = new LinkRequestStore();
-    LinkRequest request = store.store("pmc-map", "request-1", "K7M9-P2Q4", later(), NOW);
-    request.validate(PLAYER_UUID, "PlayerName", NOW.plusSeconds(10));
+    LinkRequest request = store.store("my-app", "request-1", "K7M9-P2Q4", later(), NOW);
 
-    List<LinkRequest> reports = store.pendingValidationReports("pmc-map");
+    List<LinkRequest> reports = store.pendingCodeCreatedReports("my-app");
 
     assertEquals(List.of(request), reports);
-    request.markValidationReported();
-    assertTrue(store.pendingValidationReports("pmc-map").isEmpty());
+    request.markCodeCreatedReported();
+    assertTrue(store.pendingCodeCreatedReports("my-app").isEmpty());
   }
 
   @Test
-  void removesExpiredRequests() {
+  void exposesUnreportedValidatedRequestsByApp() {
     LinkRequestStore store = new LinkRequestStore();
-    store.store("pmc-map", "request-1", "K7M9-P2Q4", NOW.plusSeconds(1), NOW);
+    LinkRequest request = store.store("my-app", "request-1", "K7M9-P2Q4", later(), NOW);
+    request.validate(PLAYER_UUID, "PlayerName", NOW.plusSeconds(10));
 
-    int removed = store.removeExpired(NOW.plusSeconds(1));
+    List<LinkRequest> reports = store.pendingValidationReports("my-app");
+
+    assertEquals(List.of(request), reports);
+    request.markValidationReported();
+    assertTrue(store.pendingValidationReports("my-app").isEmpty());
+  }
+
+  @Test
+  void expiresRequestsBeforeRemoval() {
+    LinkRequestStore store = new LinkRequestStore();
+    LinkRequest request = store.store("my-app", "request-1", "K7M9-P2Q4", NOW.plusSeconds(1), NOW);
+
+    int expired = store.expirePending(NOW.plusSeconds(1));
+
+    assertEquals(1, expired);
+    assertEquals(1, store.size());
+    assertEquals(List.of(request), store.pendingExpirationReports("my-app"));
+    assertFalse(store.hasActiveCode("K7M9-P2Q4", NOW.plusSeconds(2)));
+  }
+
+  @Test
+  void removesReportedTerminalRequests() {
+    LinkRequestStore store = new LinkRequestStore();
+    LinkRequest request = store.store("my-app", "request-1", "K7M9-P2Q4", NOW.plusSeconds(1), NOW);
+    store.expirePending(NOW.plusSeconds(1));
+
+    request.markExpirationReported();
+    int removed = store.removeReportedTerminals();
 
     assertEquals(1, removed);
     assertEquals(0, store.size());
-    assertFalse(store.hasActiveCode("K7M9-P2Q4", NOW.plusSeconds(2)));
+    assertEquals(Optional.empty(), store.findByRemoteRequest("my-app", "request-1"));
+  }
+
+  @Test
+  void removesReportedValidatedRequests() {
+    LinkRequestStore store = new LinkRequestStore();
+    LinkRequest request = store.store("my-app", "request-1", "K7M9-P2Q4", later(), NOW);
+    request.validate(PLAYER_UUID, "PlayerName", NOW.plusSeconds(10));
+
+    request.markValidationReported();
+    int removed = store.removeReportedTerminals();
+
+    assertEquals(1, removed);
+    assertEquals(0, store.size());
+    assertEquals(Optional.empty(), store.findByRemoteRequest("my-app", "request-1"));
   }
 
   private static Instant later() {
