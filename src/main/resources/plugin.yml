@@ -1,0 +1,15 @@
+main: ${PACKAGE}.${NAME}
+name: ${NAME}
+version: "${VERSION}"
+api-version: "${API_VERSION}"
+author: ${AUTHOR}
+description: "${DESCRIPTION}"
+commands:
+  mineverify:
+    description: Validate a MineVerify code.
+    usage: "/mineverify <code>"
+    permission: mineverify.use
+permissions:
+  mineverify.use:
+    description: Allows players to validate a MineVerify code.
+    default: true

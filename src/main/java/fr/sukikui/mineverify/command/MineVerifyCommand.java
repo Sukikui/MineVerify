@@ -1,0 +1,78 @@
+package fr.sukikui.mineverify.command;
+
+import fr.sukikui.mineverify.config.RemoteAppConfig;
+import fr.sukikui.mineverify.link.LinkRequest;
+import fr.sukikui.mineverify.link.LinkRequestStore;
+import fr.sukikui.mineverify.message.MineVerifyMessages;
+import fr.sukikui.mineverify.message.MineVerifyMessenger;
+import fr.sukikui.mineverify.remote.RemoteAppPoller;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.Executor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Handles the player-facing MineVerify command.
+ */
+public final class MineVerifyCommand implements CommandExecutor {
+
+  private final MineVerifyMessenger messenger;
+  private final LinkRequestStore requestStore;
+  private final RemoteAppPoller poller;
+  private final Executor asyncExecutor;
+
+  /**
+   * Creates a MineVerify command handler.
+   */
+  public MineVerifyCommand(
+      MineVerifyMessages messages,
+      LinkRequestStore requestStore,
+      RemoteAppPoller poller,
+      Executor asyncExecutor) {
+    messenger = new MineVerifyMessenger(Objects.requireNonNull(messages, "messages"));
+    this.requestStore = Objects.requireNonNull(requestStore, "requestStore");
+    this.poller = Objects.requireNonNull(poller, "poller");
+    this.asyncExecutor = Objects.requireNonNull(asyncExecutor, "asyncExecutor");
+  }
+
+  @Override
+  public boolean onCommand(
+      @NotNull CommandSender sender,
+      @NotNull Command command,
+      @NotNull String label,
+      @NotNull String[] args) {
+    if (!(sender instanceof Player player)) {
+      messenger.sendPlayerOnly(sender);
+      return true;
+    }
+
+    if (args.length != 1) {
+      messenger.sendUsage(sender);
+      return true;
+    }
+
+    Optional<LinkRequest> request =
+        requestStore.validateCode(args[0], player.getUniqueId(), player.getName(), Instant.now());
+    if (request.isEmpty()) {
+      messenger.sendInvalidCode(sender);
+      return true;
+    }
+
+    messenger.sendAccepted(sender, appName(request.get()));
+    asyncExecutor.execute(() -> poller.reportValidation(request.get()));
+    return true;
+  }
+
+  private String appName(LinkRequest request) {
+    RemoteAppConfig app = poller.apps().get(request.appId());
+    if (app == null) {
+      return request.appId();
+    }
+    return app.name();
+  }
+}
