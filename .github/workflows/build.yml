@@ -1,0 +1,33 @@
+name: Build
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐘 Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: ☕ Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: 🐘 Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: 🛠 Build with Gradle
+        run: ./gradlew build --stacktrace
+
+      - name: 📦 Capture build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: Artifacts
+          path: build/libs/

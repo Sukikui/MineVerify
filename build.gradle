@@ -1,0 +1,134 @@
+import com.github.spotbugs.snom.SpotBugsTask
+
+plugins {
+    id 'checkstyle'
+    id "com.github.spotbugs" version "6.5.5"
+    id 'com.gradleup.shadow' version '9.4.2'
+    id 'java'
+}
+
+group = "fr.sukikui.minelink"
+version = "0.1.0-SNAPSHOT"
+
+def minecraftVersion = '26.1.2'
+def paperApiVersion = "${minecraftVersion}.build.65-stable"
+def spotbugsAnnotationsVersion = '4.9.8'
+def junitVersion = '6.1.0'
+def archiveVersionLabel = "${version}+mc${minecraftVersion}"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+repositories {
+    maven {
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+        content {
+            includeModule("io.papermc.paper", "paper-api")
+            includeModule("net.md-5", "bungeecord-chat")
+            includeGroup("io.papermc.adventure")
+        }
+    }
+
+    maven {
+        name = 'minecraft'
+        url = 'https://libraries.minecraft.net'
+        content {
+            includeModule("com.mojang", "brigadier")
+        }
+    }
+
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
+    compileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsAnnotationsVersion}"
+    implementation 'com.google.code.gson:gson:2.14.0'
+    spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.14.0'
+    testCompileOnly "com.github.spotbugs:spotbugs-annotations:${spotbugsAnnotationsVersion}"
+    testImplementation "io.papermc.paper:paper-api:${paperApiVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junitVersion}"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+processResources {
+    def resourceProperties = [
+            NAME: rootProject.name,
+            VERSION: project.version.toString(),
+            PACKAGE: rootProject.group.toString(),
+            AUTHOR: "Sukikui",
+            DESCRIPTION: "Generic PaperMC plugin for linking connected Minecraft players to external accounts",
+            API_VERSION: minecraftVersion
+    ]
+    inputs.properties(resourceProperties)
+    filesMatching("**/plugin.yml") {
+        expand(resourceProperties)
+    }
+}
+
+checkstyle {
+    toolVersion = '13.4.2'
+    maxWarnings = 0
+}
+
+configurations.checkstyle {
+    resolutionStrategy.capabilitiesResolution.withCapability("com.google.collections:google-collections") {
+        select("com.google.guava:guava:23.0")
+    }
+}
+
+tasks.withType(Checkstyle).configureEach {
+    reports {
+        xml.required = false
+        html.required = true
+    }
+}
+
+tasks.withType(SpotBugsTask).configureEach {
+    reports.create("html") {
+        required = true
+    }
+    reports.create("xml") {
+        required = false
+    }
+}
+
+shadowJar {
+    archiveBaseName.set(rootProject.name)
+    archiveVersion.set(archiveVersionLabel)
+    archiveClassifier.set('')
+    minimize()
+}
+
+// Disable jar and replace with shadowJar
+jar.enabled = false
+assemble.dependsOn(shadowJar)
+
+tasks.register('printProjectName') {
+    doLast {
+        println rootProject.name
+    }
+}
+
+tasks.register('release') {
+    dependsOn build
+
+    doLast {
+        if (!version.endsWith("-SNAPSHOT")) {
+            // Rename final JAR to trim off version information
+            shadowJar.archiveFile.get().getAsFile()
+                    .renameTo(layout.buildDirectory.get().toString() + File.separator + 'libs' + File.separator
+                            + "${rootProject.name}-${archiveVersionLabel}.jar")
+        }
+    }
+}
