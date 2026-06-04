@@ -1,0 +1,6 @@
+{
+  "usage": "用法: /mineverify <code>",
+  "player-only": "此命令只能由已连接的玩家使用。",
+  "invalid-code": "此链接代码无效或已过期。",
+  "accepted": "%s 的代码已接受。应用将很快更新。"
+}

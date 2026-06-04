@@ -1,0 +1,6 @@
+{
+  "usage": "Uso: /mineverify <code>",
+  "player-only": "Este comando só pode ser usado por um jogador conectado.",
+  "invalid-code": "Este código de vinculação é inválido ou expirou.",
+  "accepted": "Código aceito para %s. O app será atualizado em breve."
+}

@@ -1,0 +1,6 @@
+{
+  "usage": "Usage: /mineverify <code>",
+  "player-only": "This command can only be used by a connected player.",
+  "invalid-code": "This link code is invalid or expired.",
+  "accepted": "Code accepted for %s. The app will update shortly."
+}
