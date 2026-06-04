@@ -7,8 +7,8 @@ plugins {
     id 'java'
 }
 
-group = "fr.sukikui.minelink"
-version = "0.1.0-SNAPSHOT"
+group = "fr.sukikui.mineverify"
+version = "0.1.0"
 
 def minecraftVersion = '26.1.2'
 def paperApiVersion = "${minecraftVersion}.build.65-stable"
@@ -67,7 +67,7 @@ processResources {
             VERSION: project.version.toString(),
             PACKAGE: rootProject.group.toString(),
             AUTHOR: "Sukikui",
-            DESCRIPTION: "Generic PaperMC plugin for linking connected Minecraft players to external accounts",
+            DESCRIPTION: "Lightweight PaperMC plugin allowing apps to verify Minecraft players through in-game code validation",
             API_VERSION: minecraftVersion
     ]
     inputs.properties(resourceProperties)

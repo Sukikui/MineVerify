@@ -1,0 +1,18 @@
+# Language used by in-game MineVerify messages.
+# Available: de_de, en_us, es_es, fr_fr, it_it, ja_jp, pt_br, ru_ru, zh_cn
+language: "en_us"
+
+apps: {}
+# Example:
+# apps:
+#   my-app:
+#     name: "My App"
+#     base-url: "https://my-app.com"
+#     token: "long-random-token-for-my-app"
+#     poll-interval-seconds: 3
+
+linking:
+  # Generated code validity duration.
+  code-ttl-seconds: 300
+  # Interval for removing expired in-memory requests.
+  cleanup-interval-seconds: 60
