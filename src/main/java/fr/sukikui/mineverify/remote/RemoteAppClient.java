@@ -24,10 +24,10 @@ import java.util.Objects;
  */
 public final class RemoteAppClient {
 
-  private static final String PENDING_REQUESTS_PATH = "/api/mineverify/pending-requests";
-  private static final String CODE_CREATED_PATH = "/api/mineverify/code-created";
-  private static final String VALIDATED_PATH = "/api/mineverify/validated";
-  private static final String EXPIRED_PATH = "/api/mineverify/expired";
+  static final String PENDING_REQUESTS_PATH = "/api/mineverify/pending-requests";
+  static final String CODE_CREATED_PATH = "/api/mineverify/code-created";
+  static final String VALIDATED_PATH = "/api/mineverify/validated";
+  static final String EXPIRED_PATH = "/api/mineverify/expired";
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
   private final HttpClient httpClient;
@@ -45,12 +45,15 @@ public final class RemoteAppClient {
    */
   public PendingRemoteRequests fetchPendingRequests(RemoteAppConfig app)
       throws RemoteAppException {
+    String operation = "fetch pending requests";
+    String url = app.endpoint(PENDING_REQUESTS_PATH);
     HttpRequest request =
-        baseRequest(app, PENDING_REQUESTS_PATH).GET().build();
-    HttpResponse<String> response = send(request);
-    ensureSuccess(response, app, "fetch pending requests");
+        baseRequest(url, app, operation).GET().build();
+    HttpResponse<String> response = send(request, operation, url);
+    ensureSuccess(response, app, operation, url);
     return new PendingRemoteRequests(
-        parsePendingRequests(app, response.body(), response.statusCode()), response.statusCode());
+        parsePendingRequests(app, response.body(), response.statusCode(), operation, url),
+        response.statusCode());
   }
 
   /**
@@ -103,45 +106,56 @@ public final class RemoteAppClient {
   private int postJson(
       RemoteAppConfig app, String path, JsonObject payload, String operation)
       throws RemoteAppException {
+    String url = app.endpoint(path);
     HttpRequest request =
-        baseRequest(app, path)
+        baseRequest(url, app, operation)
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload)))
             .build();
-    HttpResponse<String> response = send(request);
-    ensureSuccess(response, app, operation);
+    HttpResponse<String> response = send(request, operation, url);
+    ensureSuccess(response, app, operation, url);
     return response.statusCode();
   }
 
-  private HttpRequest.Builder baseRequest(RemoteAppConfig app, String path) {
-    return HttpRequest.newBuilder(URI.create(app.endpoint(path)))
-        .timeout(REQUEST_TIMEOUT)
-        .header("Authorization", "Bearer " + app.token());
+  private HttpRequest.Builder baseRequest(String url, RemoteAppConfig app, String operation)
+      throws RemoteAppException {
+    try {
+      return HttpRequest.newBuilder(URI.create(url))
+          .version(HttpClient.Version.HTTP_1_1)
+          .timeout(REQUEST_TIMEOUT)
+          .header("Authorization", "Bearer " + app.token());
+    } catch (IllegalArgumentException exception) {
+      throw new RemoteAppException("Invalid remote app URL", exception, operation, url);
+    }
   }
 
-  private HttpResponse<String> send(HttpRequest request) throws RemoteAppException {
+  private HttpResponse<String> send(HttpRequest request, String operation, String url)
+      throws RemoteAppException {
     try {
       return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     } catch (IOException exception) {
-      throw new RemoteAppException("Remote app request failed", exception);
+      throw new RemoteAppException("Remote app request failed", exception, operation, url);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new RemoteAppException("Remote app request interrupted", exception);
+      throw new RemoteAppException("Remote app request interrupted", exception, operation, url);
     }
   }
 
   private static void ensureSuccess(
-      HttpResponse<String> response, RemoteAppConfig app, String operation)
+      HttpResponse<String> response, RemoteAppConfig app, String operation, String url)
       throws RemoteAppException {
     if (response.statusCode() < 200 || response.statusCode() >= 300) {
       throw new RemoteAppException(
           "Unable to " + operation + " for app " + app.id() + ": HTTP " + response.statusCode(),
+          operation,
+          url,
           response.statusCode());
     }
   }
 
   private static List<PendingRemoteRequest> parsePendingRequests(
-      RemoteAppConfig app, String body, int statusCode) throws RemoteAppException {
+      RemoteAppConfig app, String body, int statusCode, String operation, String url)
+      throws RemoteAppException {
     try {
       JsonObject root = JsonParser.parseString(body).getAsJsonObject();
       JsonArray requests = root.getAsJsonArray("requests");
@@ -160,7 +174,7 @@ public final class RemoteAppClient {
       return pending;
     } catch (IllegalStateException | JsonParseException exception) {
       throw new RemoteAppException("Invalid pending request response for app " + app.id(),
-          exception, statusCode);
+          exception, operation, url, statusCode);
     }
   }
 

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -95,8 +96,7 @@ public final class RemoteAppPoller {
       request.markCodeCreatedReported();
     } catch (RemoteAppException exception) {
       recordFailure(app, CODE_CREATED_ENDPOINT, exception);
-      logger.warning("Unable to report MineVerify code for app " + app.id() + ": "
-          + exception.getMessage());
+      logRemoteFailure(app, "report MineVerify code", exception);
     }
   }
 
@@ -115,8 +115,7 @@ public final class RemoteAppPoller {
       request.markValidationReported();
     } catch (RemoteAppException exception) {
       recordFailure(app, VALIDATED_ENDPOINT, exception);
-      logger.warning("Unable to report MineVerify validation for app " + app.id() + ": "
-          + exception.getMessage());
+      logRemoteFailure(app, "report MineVerify validation", exception);
     }
   }
 
@@ -135,8 +134,7 @@ public final class RemoteAppPoller {
       request.markExpirationReported();
     } catch (RemoteAppException exception) {
       recordFailure(app, EXPIRED_ENDPOINT, exception);
-      logger.warning("Unable to report MineVerify expiration for app " + app.id() + ": "
-          + exception.getMessage());
+      logRemoteFailure(app, "report MineVerify expiration", exception);
     }
   }
 
@@ -166,7 +164,7 @@ public final class RemoteAppPoller {
       }
     } catch (RemoteAppException exception) {
       recordFailure(app, PENDING_REQUESTS_ENDPOINT, exception);
-      logger.warning("Unable to poll MineVerify app " + app.id() + ": " + exception.getMessage());
+      logRemoteFailure(app, "poll MineVerify app", exception);
     }
   }
 
@@ -280,13 +278,41 @@ public final class RemoteAppPoller {
 
   private void recordSuccess(RemoteAppConfig app, String endpoint, int statusCode) {
     lastResponseByApp.put(
-        app.id(), RemoteAppCallStatus.success(endpoint, statusCode, Instant.now()));
+        app.id(),
+        RemoteAppCallStatus.success(
+            endpoint, statusCode, app.endpoint(endpointPath(endpoint)), Instant.now()));
   }
 
   private void recordFailure(RemoteAppConfig app, String endpoint, RemoteAppException exception) {
     lastResponseByApp.put(
         app.id(),
         RemoteAppCallStatus.failure(
-            endpoint, exception.statusCode(), exception.getMessage(), Instant.now()));
+            endpoint,
+            exception.statusCode(),
+            exception.shortCause(),
+            exception.url().orElse(app.endpoint(endpointPath(endpoint))),
+            Instant.now()));
+  }
+
+  private void logRemoteFailure(
+      RemoteAppConfig app, String action, RemoteAppException exception) {
+    String operation = exception.operation().orElse("unknown operation");
+    String url = exception.url().orElse(app.baseUrl());
+    logger.log(
+        Level.WARNING,
+        "Unable to " + action + " " + app.id()
+            + " (operation=" + operation + ", url=" + url + ", cause="
+            + exception.shortCause() + ")",
+        exception);
+  }
+
+  private String endpointPath(String endpoint) {
+    return switch (endpoint) {
+      case PENDING_REQUESTS_ENDPOINT -> RemoteAppClient.PENDING_REQUESTS_PATH;
+      case CODE_CREATED_ENDPOINT -> RemoteAppClient.CODE_CREATED_PATH;
+      case VALIDATED_ENDPOINT -> RemoteAppClient.VALIDATED_PATH;
+      case EXPIRED_ENDPOINT -> RemoteAppClient.EXPIRED_PATH;
+      default -> "";
+    };
   }
 }

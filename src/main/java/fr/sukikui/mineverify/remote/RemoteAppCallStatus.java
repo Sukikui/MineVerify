@@ -14,30 +14,33 @@ public final class RemoteAppCallStatus {
   private final Instant at;
   private final Integer statusCode;
   private final String error;
+  private final String url;
   private final boolean success;
 
   private RemoteAppCallStatus(
-      String endpoint, Instant at, Integer statusCode, String error, boolean success) {
+      String endpoint, Instant at, Integer statusCode, String error, String url, boolean success) {
     this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
     this.at = Objects.requireNonNull(at, "at");
     this.statusCode = statusCode;
     this.error = error;
+    this.url = url;
     this.success = success;
   }
 
   /**
    * Creates a successful remote call status.
    */
-  public static RemoteAppCallStatus success(String endpoint, int statusCode, Instant at) {
-    return new RemoteAppCallStatus(endpoint, at, statusCode, null, true);
+  public static RemoteAppCallStatus success(
+      String endpoint, int statusCode, String url, Instant at) {
+    return new RemoteAppCallStatus(endpoint, at, statusCode, null, url, true);
   }
 
   /**
    * Creates a failed remote call status.
    */
   public static RemoteAppCallStatus failure(
-      String endpoint, OptionalInt statusCode, String error, Instant at) {
-    return new RemoteAppCallStatus(endpoint, at, boxed(statusCode), error, false);
+      String endpoint, OptionalInt statusCode, String error, String url, Instant at) {
+    return new RemoteAppCallStatus(endpoint, at, boxed(statusCode), error, url, false);
   }
 
   /**
@@ -69,6 +72,13 @@ public final class RemoteAppCallStatus {
    */
   public Optional<String> error() {
     return Optional.ofNullable(error);
+  }
+
+  /**
+   * Returns the URL called by MineVerify, without secret headers.
+   */
+  public Optional<String> url() {
+    return Optional.ofNullable(url);
   }
 
   /**

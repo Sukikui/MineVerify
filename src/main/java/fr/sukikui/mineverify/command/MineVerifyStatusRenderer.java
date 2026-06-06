@@ -80,6 +80,7 @@ public final class MineVerifyStatusRenderer {
 
     for (RemoteAppConfig app : poller.apps().values()) {
       sendLine(sender, MUTED + "- " + VALUE + app.id() + displayName(app));
+      sendLine(sender, "  " + LABEL + "base URL: " + VALUE + app.baseUrl());
       sendLine(sender, "  " + LABEL + "interval: " + VALUE + formatDuration(app.pollInterval()));
       sendLine(sender, "  " + LABEL + "last poll: " + VALUE + formatAgo(
           poller.lastPendingPoll(app.id()), now));
@@ -101,6 +102,7 @@ public final class MineVerifyStatusRenderer {
     sendLine(sender, "  " + LABEL + "last response: " + formatResponse(callStatus));
     sendLine(sender, "  " + LABEL + "last call: " + VALUE + callStatus.endpoint()
         + MUTED + " (" + formatAgo(Optional.of(callStatus.at()), now) + ")");
+    callStatus.url().ifPresent(url -> sendLine(sender, "  " + LABEL + "last URL: " + VALUE + url));
   }
 
   private void sendRequests(CommandSender sender, Instant now) {
@@ -171,7 +173,11 @@ public final class MineVerifyStatusRenderer {
   private String formatResponse(RemoteAppCallStatus status) {
     OptionalInt statusCode = status.statusCode();
     if (statusCode.isEmpty()) {
-      return BAD + shortError(status.error());
+      String error = shortError(status.error());
+      if (error.isBlank()) {
+        return BAD + "network error";
+      }
+      return BAD + "network error" + MUTED + " (" + error + ")";
     }
 
     int code = statusCode.getAsInt();
