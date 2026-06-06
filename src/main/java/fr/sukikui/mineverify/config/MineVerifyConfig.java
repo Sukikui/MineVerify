@@ -14,21 +14,17 @@ import org.bukkit.configuration.file.FileConfiguration;
 public final class MineVerifyConfig {
 
   private static final long DEFAULT_CODE_TTL_SECONDS = 300;
-  private static final long DEFAULT_CLEANUP_INTERVAL_SECONDS = 60;
 
   private final Map<String, RemoteAppConfig> apps;
   private final Duration codeTtl;
-  private final Duration cleanupInterval;
   private final MineVerifyMessages messages;
 
   private MineVerifyConfig(
       Map<String, RemoteAppConfig> apps,
       Duration codeTtl,
-      Duration cleanupInterval,
       MineVerifyMessages messages) {
     this.apps = Collections.unmodifiableMap(new LinkedHashMap<>(apps));
     this.codeTtl = codeTtl;
-    this.cleanupInterval = cleanupInterval;
     this.messages = messages;
   }
 
@@ -39,8 +35,6 @@ public final class MineVerifyConfig {
     return new MineVerifyConfig(
         loadApps(config),
         positiveDuration(config, "linking.code-ttl-seconds", DEFAULT_CODE_TTL_SECONDS),
-        positiveDuration(
-            config, "linking.cleanup-interval-seconds", DEFAULT_CLEANUP_INTERVAL_SECONDS),
         MineVerifyMessages.load(config.getString("language", "en_us")));
   }
 
@@ -56,13 +50,6 @@ public final class MineVerifyConfig {
    */
   public Duration codeTtl() {
     return codeTtl;
-  }
-
-  /**
-   * Returns lifecycle cleanup interval.
-   */
-  public Duration cleanupInterval() {
-    return cleanupInterval;
   }
 
   /**

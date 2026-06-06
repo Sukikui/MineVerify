@@ -1,6 +1,16 @@
 # 🧩 App Integration Checklist
 
-### 1. Configure MineVerify for your app
+## 🎮 Minecraft Server Side
+
+### 1. Generate a token
+
+Generate one random token per app. Use the same value in MineVerify config and in the app backend.
+
+```bash
+openssl rand -base64 32
+```
+
+### 2. Configure MineVerify for the app
 
 ```yaml
 apps:
@@ -11,19 +21,27 @@ apps:
     poll-interval-seconds: 3
 ```
 
-### 2. Store the same token in your app backend
+`poll-interval-seconds` is only used while a player-triggered polling session is active.
+
+## 🌐 App Side
+
+### 1. Store the MineVerify token
+
+Use the same token as the one configured on the Minecraft server.
 
 ```env
 MINEVERIFY_TOKEN=generated-token
 ```
 
-### 3. Reject requests without this header
+### 2. Authenticate MineVerify requests
+
+Reject MineVerify endpoint calls without this header.
 
 ```http
 Authorization: Bearer generated-token
 ```
 
-### 4. Store verification requests with these fields
+### 3. Store verification request fields
 
 | Field | Required | Notes |
 | --- | --- | --- |
@@ -36,7 +54,10 @@ Authorization: Bearer generated-token
 | `validatedAt` | No | Filled by `/api/mineverify/validated`. |
 | `expiredAt` | No | Filled by `/api/mineverify/expired`. |
 
-### 5. Create a request when the user starts verification
+### 4. Create an internal request
+
+When the user starts verification, create and store a request in your app backend/database. This is
+an internal storage example, not a payload sent to MineVerify.
 
 ```json
 {
@@ -51,9 +72,21 @@ Authorization: Bearer generated-token
 }
 ```
 
+### 5. Show the start command
+
+After creating the internal request, ask the player to join the Minecraft server and run:
+
+```text
+/mineverify
+```
+
 ### 6. Implement `GET /api/mineverify/pending-requests`
 
-Return only requests that still need a MineVerify code.
+Return requests where:
+
+- `code` is null
+- `validatedAt` is null
+- `expiredAt` is null
 
 ```json
 {
@@ -63,14 +96,6 @@ Return only requests that still need a MineVerify code.
     }
   ]
 }
-```
-
-Selection rule:
-
-```text
-code is null
-validatedAt is null
-expiredAt is null
 ```
 
 Return an empty list when no request is waiting.
@@ -83,7 +108,7 @@ Return an empty list when no request is waiting.
 
 ### 7. Implement `POST /api/mineverify/code-created`
 
-Expected payload:
+Payload sent by MineVerify:
 
 ```json
 {
@@ -94,19 +119,16 @@ Expected payload:
 }
 ```
 
-Required handling:
+Do:
 
-```text
-find request by requestId
-require validatedAt null
-require expiredAt null
-if code already equals payload code, return 2xx
-store code from payload
-store expiresAt from payload
-return 2xx
-```
+- Find the request by `requestId`.
+- Ignore duplicate retries for the same `code`.
+- Store `code` and `expiresAt`.
+- Return `2xx`.
 
-### 8. Show the command while the request has a code and no terminal event
+### 8. Show the code command
+
+Show this while `code` exists and neither `validatedAt` nor `expiredAt` exists.
 
 ```text
 /mineverify K7M9-P2Q4
@@ -114,7 +136,7 @@ return 2xx
 
 ### 9. Implement `POST /api/mineverify/validated`
 
-Expected payload:
+Payload sent by MineVerify:
 
 ```json
 {
@@ -127,23 +149,17 @@ Expected payload:
 }
 ```
 
-Required handling:
+Do:
 
-```text
-find request by requestId
-require matching code
-if validatedAt already exists for same code, return 2xx
-require expiredAt null
-store minecraftUuid
-store minecraftName
-store validatedAt
-persist externalUserId <-> minecraftUuid link
-return 2xx
-```
+- Find the request by `requestId`.
+- Ignore duplicate retries for the same validation.
+- Store `minecraftUuid`, `minecraftName`, and `validatedAt`.
+- Persist the `externalUserId` <-> `minecraftUuid` link.
+- Return `2xx`.
 
 ### 10. Implement `POST /api/mineverify/expired`
 
-Expected payload:
+Payload sent by MineVerify:
 
 ```json
 {
@@ -155,24 +171,9 @@ Expected payload:
 }
 ```
 
-Required handling:
+Do:
 
-```text
-find request by requestId
-require matching code if code is already stored
-if validatedAt already exists for same code, return 2xx
-if expiredAt already exists for same code, return 2xx
-store code if missing
-store expiresAt
-store expiredAt
-return 2xx
-```
-
-### 11. Derive browser UI from stored fields
-
-| Stored fields | UI |
-| --- | --- |
-| `code` is null | Waiting for Minecraft server. |
-| `code` exists and `validatedAt`/`expiredAt` are null | Show `/mineverify <code>`. |
-| `validatedAt` exists | Show linked Minecraft account. |
-| `expiredAt` exists | Ask the user to start again. |
+- Find the request by `requestId`.
+- Ignore duplicate retries for the same expiration.
+- Store `expiresAt` and `expiredAt`.
+- Return `2xx`.

@@ -40,6 +40,13 @@ public final class MineVerifyMessenger {
   }
 
   /**
+   * Sends polling trigger feedback.
+   */
+  public void sendPollingStarted(CommandSender sender) {
+    sendWarning(sender, messages.pollingStarted());
+  }
+
+  /**
    * Sends successful local validation feedback.
    */
   public void sendAccepted(CommandSender sender, String appName) {

@@ -11,9 +11,10 @@ Lightweight PaperMC plugin allowing apps to verify Minecraft players through in-
 MineVerify lets external apps verify that a Minecraft account is controlled by a real player
 connected to your server.
 
-The app creates a verification request, MineVerify generates and owns the temporary code lifecycle,
-and the player validates it in game with `/mineverify <code>`. MineVerify then sends either the
-verified Minecraft identity or an expiration event back to the app.
+The app creates a verification request, the player starts the check in game with `/mineverify`,
+then MineVerify generates and owns the temporary code lifecycle. The player validates the generated
+code with `/mineverify <code>`, and MineVerify sends either the verified Minecraft identity or an
+expiration event back to the app.
 
 The plugin only makes outbound HTTPS requests to configured apps. Apps do not need to call the
 Minecraft server directly.
@@ -21,10 +22,10 @@ Minecraft server directly.
 ## ✨ Features
 
 - App-driven verification flow using temporary generated codes
-- Single player command: `/mineverify <code>`
+- Single player command: `/mineverify` or `/mineverify <code>`
 - Minecraft UUID and username read directly from the connected player
 - Multi-app configuration with one URL, token, display name, and polling interval per app
-- Outbound-only app communication; no public HTTP API exposed by the plugin
+- Player-triggered outbound app polling; no public HTTP API exposed by the plugin
 - Plugin-owned code lifecycle with validation, expiration, retries, and in-memory cleanup
 - Localized in-game messages with the same language set as PlayerCoordsAPI
 - BiomeMap-style chat messages with colored prefix, warnings, success, and errors
@@ -53,7 +54,6 @@ apps:
 
 linking:
   code-ttl-seconds: 300
-  cleanup-interval-seconds: 60
 ```
 
 | Key | Default | Description |
@@ -62,14 +62,14 @@ linking:
 | `apps.<id>.name` | `<id>` | Player-facing app name shown after successful validation. |
 | `apps.<id>.base-url` | Required | App backend base URL. |
 | `apps.<id>.token` | Required | Bearer token used by MineVerify when calling this app. |
-| `apps.<id>.poll-interval-seconds` | `3` | How often MineVerify checks this app for pending requests. |
+| `apps.<id>.poll-interval-seconds` | `3` | How often MineVerify checks this app during an active player-triggered polling session. |
 | `linking.code-ttl-seconds` | `300` | Generated code validity duration. |
-| `linking.cleanup-interval-seconds` | `60` | Pending code expiration and reported terminal request cleanup interval. |
 
 ## 🕹 Command Usage
 
 | Command | Description |
 | --- | --- |
+| `/mineverify` | Starts checking configured apps for pending verification requests. |
 | `/mineverify <code>` | Validates a generated code for the connected player. |
 
 The command must be run by a real player. Console execution is rejected because the Minecraft
@@ -77,9 +77,9 @@ identity is read from the connected player context.
 
 ## 🔁 How It Works
 
-MineVerify runs an outbound polling flow. The app creates a request and exposes it. MineVerify
-fetches it, generates the code, owns its lifecycle, and sends app events when the code is created,
-validated, or expired.
+MineVerify runs an outbound flow triggered by the player. The app creates a request and asks the
+player to run `/mineverify`. MineVerify then polls configured apps, generates the code, owns its
+lifecycle, and sends app events when the code is created, validated, or expired.
 
 ### 1. The app creates a request
 
@@ -92,9 +92,18 @@ The app creates a request for its logged-in user and keeps the relation with its
 }
 ```
 
-### 2. MineVerify polls the app
+### 2. The app asks the player to start the check
 
-MineVerify calls the configured app every `poll-interval-seconds`.
+The app tells the player to join the Minecraft server and run:
+
+```text
+/mineverify
+```
+
+### 3. MineVerify polls the app
+
+After `/mineverify`, MineVerify calls configured apps every `poll-interval-seconds` while there is
+something to process.
 
 ```http
 GET https://my-app.com/api/mineverify/pending-requests
@@ -113,7 +122,7 @@ The app returns requests waiting for a MineVerify-generated code.
 }
 ```
 
-### 3. MineVerify creates the plugin-side request
+### 4. MineVerify creates the plugin-side request
 
 MineVerify generates a temporary readable code.
 
@@ -125,7 +134,7 @@ It stores the code in memory with the owning app id, request id, expiration time
 lifecycle data. From this point, MineVerify owns whether the request is active, validated, or
 expired.
 
-### 4. MineVerify sends the code to the app
+### 5. MineVerify sends the code to the app
 
 ```http
 POST https://my-app.com/api/mineverify/code-created
@@ -148,7 +157,7 @@ The app can now show the command to the user.
 /mineverify K7M9-P2Q4
 ```
 
-### 5. The player validates in game
+### 6. The player validates in game
 
 The player joins the server and runs:
 
@@ -166,7 +175,7 @@ identity from the connected player:
 }
 ```
 
-### 6. MineVerify sends the validation to the app
+### 7. MineVerify sends the validation to the app
 
 ```http
 POST https://my-app.com/api/mineverify/validated
@@ -185,7 +194,7 @@ Content-Type: application/json
 }
 ```
 
-### 7. If the code expires, MineVerify sends the expiration to the app
+### 8. If the code expires, MineVerify sends the expiration to the app
 
 If the player does not validate before `expiresAt`, MineVerify expires the request and sends:
 
@@ -205,7 +214,7 @@ Content-Type: application/json
 }
 ```
 
-### 8. The app stores the result
+### 9. The app stores the result
 
 On `validated`, the app links its own user to the verified Minecraft account. On `expired`, it
 stores the expiration and lets the user start again.

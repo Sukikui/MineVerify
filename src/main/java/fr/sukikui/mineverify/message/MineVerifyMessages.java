@@ -70,6 +70,13 @@ public final class MineVerifyMessages {
   }
 
   /**
+   * Returns the polling started message.
+   */
+  public String pollingStarted() {
+    return value("polling-started");
+  }
+
+  /**
    * Returns the accepted code message.
    */
   public String accepted(String appName) {

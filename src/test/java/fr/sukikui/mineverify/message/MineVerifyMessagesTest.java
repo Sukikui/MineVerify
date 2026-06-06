@@ -12,7 +12,7 @@ class MineVerifyMessagesTest {
     MineVerifyMessages messages = MineVerifyMessages.load("en_us");
 
     assertEquals("en_us", messages.language());
-    assertEquals("Usage: /mineverify <code>", messages.usage());
+    assertEquals("Usage: /mineverify [code]", messages.usage());
     assertEquals("Code accepted for My App. The app will update shortly.",
         messages.accepted("My App"));
   }
@@ -22,7 +22,7 @@ class MineVerifyMessagesTest {
     MineVerifyMessages messages = MineVerifyMessages.load("fr_fr");
 
     assertEquals("fr_fr", messages.language());
-    assertEquals("Utilisation : /mineverify <code>", messages.usage());
+    assertEquals("Utilisation : /mineverify [code]", messages.usage());
   }
 
   @Test

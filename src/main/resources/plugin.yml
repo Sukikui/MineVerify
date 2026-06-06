@@ -6,10 +6,10 @@ author: ${AUTHOR}
 description: "${DESCRIPTION}"
 commands:
   mineverify:
-    description: Validate a MineVerify code.
-    usage: "/mineverify <code>"
+    description: Start or validate a MineVerify verification.
+    usage: "/mineverify [code]"
     permission: mineverify.use
 permissions:
   mineverify.use:
-    description: Allows players to validate a MineVerify code.
+    description: Allows players to start and validate a MineVerify verification.
     default: true

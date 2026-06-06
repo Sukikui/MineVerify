@@ -14,5 +14,3 @@ apps: {}
 linking:
   # Generated code validity duration.
   code-ttl-seconds: 300
-  # Interval for expiring pending codes and cleaning reported terminal requests.
-  cleanup-interval-seconds: 60

@@ -142,6 +142,13 @@ public final class LinkRequestStore {
     return requestsByCode.size();
   }
 
+  /**
+   * Returns true when at least one request is still stored.
+   */
+  public synchronized boolean hasRequests() {
+    return !requestsByCode.isEmpty();
+  }
+
   private static String remoteKey(String appId, String requestId) {
     return appId + '\n' + requestId;
   }

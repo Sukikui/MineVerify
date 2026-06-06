@@ -19,7 +19,6 @@ class MineVerifyConfigTest {
     yaml.set("apps.another-app.base-url", "https://another.example.com");
     yaml.set("apps.another-app.token", "another-token");
     yaml.set("linking.code-ttl-seconds", 120);
-    yaml.set("linking.cleanup-interval-seconds", 30);
     yaml.set("language", "fr_fr");
 
     MineVerifyConfig config = MineVerifyConfig.load(yaml);
@@ -30,7 +29,6 @@ class MineVerifyConfigTest {
     assertEquals("my-app-token", config.apps().get("my-app").token());
     assertEquals(Duration.ofSeconds(5), config.apps().get("my-app").pollInterval());
     assertEquals(Duration.ofSeconds(120), config.codeTtl());
-    assertEquals(Duration.ofSeconds(30), config.cleanupInterval());
     assertEquals("fr_fr", config.messages().language());
   }
 

@@ -5,9 +5,9 @@ import fr.sukikui.mineverify.config.RemoteAppConfig;
 import fr.sukikui.mineverify.link.LinkCodeGenerator;
 import fr.sukikui.mineverify.link.LinkRequest;
 import fr.sukikui.mineverify.link.LinkRequestStore;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -24,7 +24,9 @@ public final class RemoteAppPoller {
   private final LinkCodeGenerator codeGenerator;
   private final RemoteAppClient remoteClient;
   private final Logger logger;
-  private final List<BukkitTask> tasks = new ArrayList<>();
+  private final JavaPlugin plugin;
+  private final Map<String, Instant> lastPendingPollByApp = new HashMap<>();
+  private BukkitTask task;
 
   /**
    * Creates a remote app poller.
@@ -34,37 +36,42 @@ public final class RemoteAppPoller {
       LinkRequestStore requestStore,
       LinkCodeGenerator codeGenerator,
       RemoteAppClient remoteClient,
+      JavaPlugin plugin,
       Logger logger) {
     this.config = Objects.requireNonNull(config, "config");
     this.requestStore = Objects.requireNonNull(requestStore, "requestStore");
     this.codeGenerator = Objects.requireNonNull(codeGenerator, "codeGenerator");
     this.remoteClient = Objects.requireNonNull(remoteClient, "remoteClient");
+    this.plugin = Objects.requireNonNull(plugin, "plugin");
     this.logger = Objects.requireNonNull(logger, "logger");
   }
 
   /**
-   * Starts one async polling task per configured app.
+   * Starts the on-demand polling loop when it is not already running.
    */
-  public void start(JavaPlugin plugin) {
-    for (RemoteAppConfig app : config.apps().values()) {
-      long intervalTicks = app.pollInterval().toSeconds() * 20L;
-      BukkitTask task =
-          plugin
-              .getServer()
-              .getScheduler()
-              .runTaskTimerAsynchronously(plugin, () -> poll(app), 20L, intervalTicks);
-      tasks.add(task);
+  public synchronized boolean trigger() {
+    if (config.apps().isEmpty() || task != null) {
+      return false;
     }
+
+    lastPendingPollByApp.clear();
+    task =
+        plugin
+            .getServer()
+            .getScheduler()
+            .runTaskTimerAsynchronously(plugin, this::pollAll, 1L, pollIntervalTicks());
+    return true;
   }
 
   /**
-   * Stops all polling tasks.
+   * Stops the polling task.
    */
-  public void stop() {
-    for (BukkitTask task : tasks) {
+  public synchronized void stop() {
+    if (task != null) {
       task.cancel();
+      task = null;
     }
-    tasks.clear();
+    lastPendingPollByApp.clear();
   }
 
   /**
@@ -121,13 +128,21 @@ public final class RemoteAppPoller {
     }
   }
 
-  private void poll(RemoteAppConfig app) {
-    pollPendingRequests(app);
+  private void pollAll() {
+    Instant now = Instant.now();
+    for (RemoteAppConfig app : config.apps().values()) {
+      if (shouldPollPendingRequests(app, now)) {
+        pollPendingRequests(app);
+      }
+    }
     expirePendingRequests();
-    reportPendingCodeCreated(app);
-    reportPendingValidations(app);
-    reportPendingExpirations(app);
+    for (RemoteAppConfig app : config.apps().values()) {
+      reportPendingCodeCreated(app);
+      reportPendingValidations(app);
+      reportPendingExpirations(app);
+    }
     requestStore.removeReportedTerminals();
+    stopIfIdle();
   }
 
   private void pollPendingRequests(RemoteAppConfig app) {
@@ -138,6 +153,15 @@ public final class RemoteAppPoller {
     } catch (RemoteAppException exception) {
       logger.warning("Unable to poll MineVerify app " + app.id() + ": " + exception.getMessage());
     }
+  }
+
+  private boolean shouldPollPendingRequests(RemoteAppConfig app, Instant now) {
+    Instant lastPoll = lastPendingPollByApp.get(app.id());
+    if (lastPoll != null && Duration.between(lastPoll, now).compareTo(app.pollInterval()) < 0) {
+      return false;
+    }
+    lastPendingPollByApp.put(app.id(), now);
+    return true;
   }
 
   private LinkRequest findOrCreateRequest(PendingRemoteRequest pending) {
@@ -173,6 +197,21 @@ public final class RemoteAppPoller {
     for (LinkRequest request : requestStore.pendingExpirationReports(app.id())) {
       reportExpiration(request);
     }
+  }
+
+  private void stopIfIdle() {
+    if (!requestStore.hasRequests()) {
+      stop();
+    }
+  }
+
+  private long pollIntervalTicks() {
+    long seconds =
+        config.apps().values().stream()
+            .mapToLong(app -> app.pollInterval().toSeconds())
+            .min()
+            .orElse(1L);
+    return Math.max(1L, seconds * 20L);
   }
 
   /**

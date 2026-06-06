@@ -51,6 +51,12 @@ public final class MineVerifyCommand implements CommandExecutor {
       return true;
     }
 
+    if (args.length == 0) {
+      poller.trigger();
+      messenger.sendPollingStarted(sender);
+      return true;
+    }
+
     if (args.length != 1) {
       messenger.sendUsage(sender);
       return true;
