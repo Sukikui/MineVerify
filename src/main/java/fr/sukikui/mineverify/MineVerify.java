@@ -55,5 +55,6 @@ public final class MineVerify extends JavaPlugin {
     PluginCommand command =
         Objects.requireNonNull(getCommand("mineverify"), "Command mineverify not defined");
     command.setExecutor(commandHandler);
+    command.setTabCompleter(commandHandler);
   }
 }

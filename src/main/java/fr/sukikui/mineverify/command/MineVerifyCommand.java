@@ -7,21 +7,26 @@ import fr.sukikui.mineverify.message.MineVerifyMessages;
 import fr.sukikui.mineverify.message.MineVerifyMessenger;
 import fr.sukikui.mineverify.remote.RemoteAppPoller;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
+import org.bukkit.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Handles the player-facing MineVerify command.
  */
-public final class MineVerifyCommand implements CommandExecutor {
+public final class MineVerifyCommand implements TabExecutor {
 
   private static final String ADMIN_PERMISSION = "mineverify.admin";
+  private static final String STATUS_ARGUMENT = "status";
+  private static final String REQUESTS_ARGUMENT = "requests";
 
   private final MineVerifyMessenger messenger;
   private final MineVerifyStatusRenderer statusRenderer;
@@ -82,6 +87,27 @@ public final class MineVerifyCommand implements CommandExecutor {
     return true;
   }
 
+  @Override
+  public @NotNull List<String> onTabComplete(
+      @NotNull CommandSender sender,
+      @NotNull Command command,
+      @NotNull String label,
+      @NotNull String[] args) {
+    if (!sender.hasPermission(ADMIN_PERMISSION)) {
+      return List.of();
+    }
+
+    if (args.length == 1) {
+      return matches(args[0], List.of(STATUS_ARGUMENT));
+    }
+
+    if (args.length == 2 && args[0].equalsIgnoreCase(STATUS_ARGUMENT)) {
+      return matches(args[1], List.of(REQUESTS_ARGUMENT));
+    }
+
+    return List.of();
+  }
+
   private boolean handleStatus(CommandSender sender, String[] args) {
     if (!sender.hasPermission(ADMIN_PERMISSION)) {
       statusRenderer.sendNoPermission(sender);
@@ -108,5 +134,11 @@ public final class MineVerifyCommand implements CommandExecutor {
       return request.appId();
     }
     return app.name();
+  }
+
+  private List<String> matches(String token, List<String> values) {
+    List<String> matches = new ArrayList<>();
+    StringUtil.copyPartialMatches(token, values, matches);
+    return matches;
   }
 }
