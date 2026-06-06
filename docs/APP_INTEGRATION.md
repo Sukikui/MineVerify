@@ -60,16 +60,16 @@ recommended app-side shape, not a payload sent to MineVerify.
 
 MineVerify only needs the `requestId`; the other fields are for your app state.
 
-| Field           | Source       | Purpose                                                                       |
-|-----------------|--------------|-------------------------------------------------------------------------------|
-| `requestId`     | **Your app** | Public verification id returned to MineVerify and received back in callbacks. |
-| `appUserId`     | **Your app** | Your own user/account id, used to link the final Minecraft identity.          |
-| `code`          | MineVerify   | Code received from `/api/mineverify/code-created`.                            |
-| `expiresAt`     | MineVerify   | Expiration received from `/api/mineverify/code-created`.                      |
-| `minecraftUuid` | MineVerify   | UUID received from `/api/mineverify/validated`.                               |
-| `minecraftName` | MineVerify   | Player name received from `/api/mineverify/validated`.                        |
-| `validatedAt`   | MineVerify   | Validation time received from `/api/mineverify/validated`.                    |
-| `expiredAt`     | MineVerify   | Expiration time received from `/api/mineverify/expired`.                      |
+| Field           | Source       | Purpose                                                                      |
+|-----------------|--------------|------------------------------------------------------------------------------|
+| `requestId`     | **Your app** | Public verification id returned to MineVerify and received back in callbacks |
+| `appUserId`     | **Your app** | Your own user/account id, used to link the final Minecraft identity          |
+| `code`          | MineVerify   | Code received from `/api/mineverify/code-created`                            |
+| `expiresAt`     | MineVerify   | Expiration received from `/api/mineverify/code-created`                      |
+| `minecraftUuid` | MineVerify   | UUID received from `/api/mineverify/validated`                               |
+| `minecraftName` | MineVerify   | Player name received from `/api/mineverify/validated`                        |
+| `validatedAt`   | MineVerify   | Validation time received from `/api/mineverify/validated`                    |
+| `expiredAt`     | MineVerify   | Expiration time received from `/api/mineverify/expired`                      |
 
 ```json
 {
