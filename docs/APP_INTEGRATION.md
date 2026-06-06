@@ -12,7 +12,7 @@ openssl rand -base64 32
 
 ### 2. Configure MineVerify for the app
 
-Mofify [`config.yml`](../src/main/resources/config.yml)
+Modify [`config.yml`](../src/main/resources/config.yml)
 to include the app:
 
 ```yaml
