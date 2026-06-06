@@ -104,7 +104,7 @@ Every request sent by MineVerify includes:
 Authorization: Bearer <app-token>
 ```
 
-For the complete app-side checklist, payloads, and storage recommendations, see
+Developers integrating MineVerify into their own app should follow
 [`docs/APP_INTEGRATION.md`](docs/APP_INTEGRATION.md).
 
 ---
