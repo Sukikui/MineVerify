@@ -152,6 +152,27 @@ public final class LinkRequest {
   }
 
   /**
+   * Returns true when the generated code was reported to the remote app.
+   */
+  public synchronized boolean isCodeCreatedReported() {
+    return codeCreatedReported;
+  }
+
+  /**
+   * Returns true when validation was reported to the remote app.
+   */
+  public synchronized boolean isValidationReported() {
+    return validationReported;
+  }
+
+  /**
+   * Returns true when expiration was reported to the remote app.
+   */
+  public synchronized boolean isExpirationReported() {
+    return expirationReported;
+  }
+
+  /**
    * Returns true when the generated code has not yet been reported to the remote app.
    */
   public synchronized boolean needsCodeCreatedReport() {

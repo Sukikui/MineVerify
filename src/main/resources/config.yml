@@ -2,15 +2,14 @@
 # Available: de_de, en_us, es_es, fr_fr, it_it, ja_jp, pt_br, ru_ru, zh_cn
 language: "en_us"
 
-apps: {}
-# Example:
-# apps:
-#   my-app:
-#     name: "My App"
-#     base-url: "https://my-app.com"
-#     token: "long-random-token-for-my-app"
-#     poll-interval-seconds: 3
+apps:
+  my-app:
+    name: "Your App"
+    base-url: "https://your-app.com"
+    token: "generated-token-from-your-app"
+    # Interval used only during an active player-triggered polling session.
+    poll-interval-seconds: 3
 
 linking:
   # Generated code validity duration.
-  code-ttl-seconds: 300
+  code-ttl-seconds: 60

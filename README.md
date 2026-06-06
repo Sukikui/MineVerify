@@ -27,6 +27,7 @@ Minecraft server directly.
 - Multi-app configuration with one URL, token, display name, and polling interval per app
 - Player-triggered outbound app polling; no public HTTP API exposed by the plugin
 - Plugin-owned code lifecycle with validation, expiration, retries, and in-memory cleanup
+- Admin status command for polling, app responses, and stored request debugging
 - Localized in-game messages with the same language set as PlayerCoordsAPI
 - BiomeMap-style chat messages with colored prefix, warnings, success, and errors
 
@@ -47,8 +48,8 @@ language: "en_us"
 
 apps:
   my-app:
-    name: "My App"
-    base-url: "https://my-app.com"
+    name: "Your App"
+    base-url: "https://your-app.com"
     token: "long-random-token-for-my-app"
     poll-interval-seconds: 3
 
@@ -71,9 +72,26 @@ linking:
 | --- | --- |
 | `/mineverify` | Starts checking configured apps for pending verification requests. |
 | `/mineverify <code>` | Validates a generated code for the connected player. |
+| `/mineverify status` | Shows polling state, configured apps, stored requests, and the last app response. |
+| `/mineverify status requests` | Shows the status view with stored request details. |
 
-The command must be run by a real player. Console execution is rejected because the Minecraft
-identity is read from the connected player context.
+`/mineverify` and `/mineverify <code>` must be run by a real player. Console execution is rejected
+because the Minecraft identity is read from the connected player context.
+
+`/mineverify status` and `/mineverify status requests` require `mineverify.admin` and can be run by
+admins or from the console.
+
+## 🧰 Admin Status
+
+`/mineverify status` shows:
+
+- whether player-triggered polling is running
+- the number of configured apps
+- the number of requests currently stored in memory
+- each app polling interval, last poll, next poll, last response, and last call
+
+`/mineverify status requests` adds every stored request with its app id, request id, state, code,
+expiration countdown, player identity when validated, and pending app reports.
 
 ## 🔁 How It Works
 
@@ -106,7 +124,7 @@ After `/mineverify`, MineVerify calls configured apps every `poll-interval-secon
 something to process.
 
 ```http
-GET https://my-app.com/api/mineverify/pending-requests
+GET https://your-app.com/api/mineverify/pending-requests
 Authorization: Bearer <app-token>
 ```
 
@@ -137,7 +155,7 @@ expired.
 ### 5. MineVerify sends the code to the app
 
 ```http
-POST https://my-app.com/api/mineverify/code-created
+POST https://your-app.com/api/mineverify/code-created
 Authorization: Bearer <app-token>
 Content-Type: application/json
 ```
@@ -178,7 +196,7 @@ identity from the connected player:
 ### 7. MineVerify sends the validation to the app
 
 ```http
-POST https://my-app.com/api/mineverify/validated
+POST https://your-app.com/api/mineverify/validated
 Authorization: Bearer <app-token>
 Content-Type: application/json
 ```
@@ -199,7 +217,7 @@ Content-Type: application/json
 If the player does not validate before `expiresAt`, MineVerify expires the request and sends:
 
 ```http
-POST https://my-app.com/api/mineverify/expired
+POST https://your-app.com/api/mineverify/expired
 Authorization: Bearer <app-token>
 Content-Type: application/json
 ```
@@ -222,7 +240,7 @@ stores the expiration and lets the user start again.
 Player success message:
 
 ```text
-[MineVerify] Code accepted for My App. The app will update shortly.
+[MineVerify] Code accepted for Your App. The app will update shortly.
 ```
 
 For the app-side implementation checklist, see

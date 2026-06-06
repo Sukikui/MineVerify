@@ -12,7 +12,7 @@ class MineVerifyConfigTest {
   @Test
   void loadsConfiguredApps() {
     YamlConfiguration yaml = new YamlConfiguration();
-    yaml.set("apps.my-app.name", "My App");
+    yaml.set("apps.my-app.name", "Your App");
     yaml.set("apps.my-app.base-url", "https://my-app.example.com/");
     yaml.set("apps.my-app.token", "my-app-token");
     yaml.set("apps.my-app.poll-interval-seconds", 5);
@@ -24,7 +24,7 @@ class MineVerifyConfigTest {
     MineVerifyConfig config = MineVerifyConfig.load(yaml);
 
     assertEquals(2, config.apps().size());
-    assertEquals("My App", config.apps().get("my-app").name());
+    assertEquals("Your App", config.apps().get("my-app").name());
     assertEquals("https://my-app.example.com", config.apps().get("my-app").baseUrl());
     assertEquals("my-app-token", config.apps().get("my-app").token());
     assertEquals(Duration.ofSeconds(5), config.apps().get("my-app").pollInterval());

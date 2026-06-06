@@ -7,8 +7,6 @@ import org.bukkit.command.CommandSender;
  */
 public final class MineVerifyMessenger {
 
-  private static final String CHAT_PREFIX = "§8[§b§lMineVerify§8] §r";
-
   private final MineVerifyMessages messages;
 
   /**
@@ -54,14 +52,14 @@ public final class MineVerifyMessenger {
   }
 
   private void sendWarning(CommandSender sender, String message) {
-    sender.sendMessage(CHAT_PREFIX + "§6" + message);
+    sender.sendMessage(MineVerifyChatStyle.PREFIX + "§6" + message);
   }
 
   private void sendSuccess(CommandSender sender, String message) {
-    sender.sendMessage(CHAT_PREFIX + "§a§l" + message);
+    sender.sendMessage(MineVerifyChatStyle.PREFIX + "§a§l" + message);
   }
 
   private void sendError(CommandSender sender, String message) {
-    sender.sendMessage(CHAT_PREFIX + "§c§lError: §c" + message);
+    sender.sendMessage(MineVerifyChatStyle.PREFIX + "§c§lError: §c" + message);
   }
 }

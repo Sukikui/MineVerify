@@ -21,7 +21,10 @@ import org.jetbrains.annotations.NotNull;
  */
 public final class MineVerifyCommand implements CommandExecutor {
 
+  private static final String ADMIN_PERMISSION = "mineverify.admin";
+
   private final MineVerifyMessenger messenger;
+  private final MineVerifyStatusRenderer statusRenderer;
   private final LinkRequestStore requestStore;
   private final RemoteAppPoller poller;
   private final Executor asyncExecutor;
@@ -37,6 +40,7 @@ public final class MineVerifyCommand implements CommandExecutor {
     messenger = new MineVerifyMessenger(Objects.requireNonNull(messages, "messages"));
     this.requestStore = Objects.requireNonNull(requestStore, "requestStore");
     this.poller = Objects.requireNonNull(poller, "poller");
+    statusRenderer = new MineVerifyStatusRenderer(poller, requestStore);
     this.asyncExecutor = Objects.requireNonNull(asyncExecutor, "asyncExecutor");
   }
 
@@ -46,6 +50,10 @@ public final class MineVerifyCommand implements CommandExecutor {
       @NotNull Command command,
       @NotNull String label,
       @NotNull String[] args) {
+    if (args.length > 0 && args[0].equalsIgnoreCase("status")) {
+      return handleStatus(sender, args);
+    }
+
     if (!(sender instanceof Player player)) {
       messenger.sendPlayerOnly(sender);
       return true;
@@ -71,6 +79,26 @@ public final class MineVerifyCommand implements CommandExecutor {
 
     messenger.sendAccepted(sender, appName(request.get()));
     asyncExecutor.execute(() -> poller.reportValidation(request.get()));
+    return true;
+  }
+
+  private boolean handleStatus(CommandSender sender, String[] args) {
+    if (!sender.hasPermission(ADMIN_PERMISSION)) {
+      statusRenderer.sendNoPermission(sender);
+      return true;
+    }
+
+    if (args.length == 1) {
+      statusRenderer.sendStatus(sender, false);
+      return true;
+    }
+
+    if (args.length == 2 && args[1].equalsIgnoreCase("requests")) {
+      statusRenderer.sendStatus(sender, true);
+      return true;
+    }
+
+    statusRenderer.sendUsage(sender);
     return true;
   }
 

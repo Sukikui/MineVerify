@@ -15,8 +15,8 @@ openssl rand -base64 32
 ```yaml
 apps:
   my-app:
-    name: "My App"
-    base-url: "https://my-app.com"
+    name: "Your App"
+    base-url: "https://your-app.com"
     token: "generated-token"
     poll-interval-seconds: 3
 ```
@@ -41,7 +41,14 @@ Reject MineVerify endpoint calls without this header.
 Authorization: Bearer generated-token
 ```
 
-### 3. Store verification request fields
+### 3. Return HTTP statuses
+
+Return `2xx` when an event is accepted or already applied.
+
+Return non-`2xx` only for integration errors that should stay visible in MineVerify status, for
+example invalid auth, invalid payload, unknown request, or conflicting stored data.
+
+### 4. Store verification request fields
 
 | Field | Required | Notes |
 | --- | --- | --- |
@@ -54,7 +61,7 @@ Authorization: Bearer generated-token
 | `validatedAt` | No | Filled by `/api/mineverify/validated`. |
 | `expiredAt` | No | Filled by `/api/mineverify/expired`. |
 
-### 4. Create an internal request
+### 5. Create an internal request
 
 When the user starts verification, create and store a request in your app backend/database. This is
 an internal storage example, not a payload sent to MineVerify.
@@ -72,7 +79,7 @@ an internal storage example, not a payload sent to MineVerify.
 }
 ```
 
-### 5. Show the start command
+### 6. Show the start command
 
 After creating the internal request, ask the player to join the Minecraft server and run:
 
@@ -80,7 +87,7 @@ After creating the internal request, ask the player to join the Minecraft server
 /mineverify
 ```
 
-### 6. Implement `GET /api/mineverify/pending-requests`
+### 7. Implement `GET /api/mineverify/pending-requests`
 
 Return requests where:
 
@@ -106,7 +113,7 @@ Return an empty list when no request is waiting.
 }
 ```
 
-### 7. Implement `POST /api/mineverify/code-created`
+### 8. Implement `POST /api/mineverify/code-created`
 
 Payload sent by MineVerify:
 
@@ -119,14 +126,13 @@ Payload sent by MineVerify:
 }
 ```
 
-Do:
+How to handle it:
 
 - Find the request by `requestId`.
 - Ignore duplicate retries for the same `code`.
 - Store `code` and `expiresAt`.
-- Return `2xx`.
 
-### 8. Show the code command
+### 9. Show the code command
 
 Show this while `code` exists and neither `validatedAt` nor `expiredAt` exists.
 
@@ -134,7 +140,7 @@ Show this while `code` exists and neither `validatedAt` nor `expiredAt` exists.
 /mineverify K7M9-P2Q4
 ```
 
-### 9. Implement `POST /api/mineverify/validated`
+### 10. Implement `POST /api/mineverify/validated`
 
 Payload sent by MineVerify:
 
@@ -149,15 +155,14 @@ Payload sent by MineVerify:
 }
 ```
 
-Do:
+How to handle it:
 
 - Find the request by `requestId`.
 - Ignore duplicate retries for the same validation.
 - Store `minecraftUuid`, `minecraftName`, and `validatedAt`.
 - Persist the `externalUserId` <-> `minecraftUuid` link.
-- Return `2xx`.
 
-### 10. Implement `POST /api/mineverify/expired`
+### 11. Implement `POST /api/mineverify/expired`
 
 Payload sent by MineVerify:
 
@@ -171,9 +176,8 @@ Payload sent by MineVerify:
 }
 ```
 
-Do:
+How to handle it:
 
 - Find the request by `requestId`.
 - Ignore duplicate retries for the same expiration.
 - Store `expiresAt` and `expiredAt`.
-- Return `2xx`.

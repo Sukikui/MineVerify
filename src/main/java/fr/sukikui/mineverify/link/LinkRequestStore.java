@@ -149,6 +149,13 @@ public final class LinkRequestStore {
     return !requestsByCode.isEmpty();
   }
 
+  /**
+   * Returns all requests currently stored in memory.
+   */
+  public synchronized List<LinkRequest> requests() {
+    return new ArrayList<>(requestsByCode.values());
+  }
+
   private static String remoteKey(String appId, String requestId) {
     return appId + '\n' + requestId;
   }

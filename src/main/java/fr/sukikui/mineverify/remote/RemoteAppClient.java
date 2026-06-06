@@ -43,19 +43,20 @@ public final class RemoteAppClient {
   /**
    * Fetches remote requests waiting for a MineVerify code.
    */
-  public List<PendingRemoteRequest> fetchPendingRequests(RemoteAppConfig app)
+  public PendingRemoteRequests fetchPendingRequests(RemoteAppConfig app)
       throws RemoteAppException {
     HttpRequest request =
         baseRequest(app, PENDING_REQUESTS_PATH).GET().build();
     HttpResponse<String> response = send(request);
     ensureSuccess(response, app, "fetch pending requests");
-    return parsePendingRequests(app, response.body());
+    return new PendingRemoteRequests(
+        parsePendingRequests(app, response.body(), response.statusCode()), response.statusCode());
   }
 
   /**
    * Sends a generated MineVerify code to its remote app.
    */
-  public void sendCodeCreated(RemoteAppConfig app, LinkRequest request)
+  public int sendCodeCreated(RemoteAppConfig app, LinkRequest request)
       throws RemoteAppException {
     JsonObject payload = new JsonObject();
     payload.addProperty("appId", request.appId());
@@ -63,13 +64,13 @@ public final class RemoteAppClient {
     payload.addProperty("code", request.code());
     payload.addProperty("expiresAt", DateTimeFormatter.ISO_INSTANT.format(request.expiresAt()));
 
-    postJson(app, CODE_CREATED_PATH, payload, "send created code");
+    return postJson(app, CODE_CREATED_PATH, payload, "send created code");
   }
 
   /**
    * Sends a validated Minecraft identity to its remote app.
    */
-  public void sendValidated(RemoteAppConfig app, LinkRequest request)
+  public int sendValidated(RemoteAppConfig app, LinkRequest request)
       throws RemoteAppException {
     JsonObject payload = new JsonObject();
     payload.addProperty("appId", request.appId());
@@ -80,13 +81,13 @@ public final class RemoteAppClient {
     payload.addProperty("validatedAt", DateTimeFormatter.ISO_INSTANT.format(
         request.validatedAt().orElseThrow()));
 
-    postJson(app, VALIDATED_PATH, payload, "send validation");
+    return postJson(app, VALIDATED_PATH, payload, "send validation");
   }
 
   /**
    * Sends an expired MineVerify request to its remote app.
    */
-  public void sendExpired(RemoteAppConfig app, LinkRequest request)
+  public int sendExpired(RemoteAppConfig app, LinkRequest request)
       throws RemoteAppException {
     JsonObject payload = new JsonObject();
     payload.addProperty("appId", request.appId());
@@ -96,10 +97,10 @@ public final class RemoteAppClient {
     payload.addProperty("expiredAt", DateTimeFormatter.ISO_INSTANT.format(
         request.expiredAt().orElse(request.expiresAt())));
 
-    postJson(app, EXPIRED_PATH, payload, "send expiration");
+    return postJson(app, EXPIRED_PATH, payload, "send expiration");
   }
 
-  private void postJson(
+  private int postJson(
       RemoteAppConfig app, String path, JsonObject payload, String operation)
       throws RemoteAppException {
     HttpRequest request =
@@ -109,6 +110,7 @@ public final class RemoteAppClient {
             .build();
     HttpResponse<String> response = send(request);
     ensureSuccess(response, app, operation);
+    return response.statusCode();
   }
 
   private HttpRequest.Builder baseRequest(RemoteAppConfig app, String path) {
@@ -133,12 +135,13 @@ public final class RemoteAppClient {
       throws RemoteAppException {
     if (response.statusCode() < 200 || response.statusCode() >= 300) {
       throw new RemoteAppException(
-          "Unable to " + operation + " for app " + app.id() + ": HTTP " + response.statusCode());
+          "Unable to " + operation + " for app " + app.id() + ": HTTP " + response.statusCode(),
+          response.statusCode());
     }
   }
 
   private static List<PendingRemoteRequest> parsePendingRequests(
-      RemoteAppConfig app, String body) throws RemoteAppException {
+      RemoteAppConfig app, String body, int statusCode) throws RemoteAppException {
     try {
       JsonObject root = JsonParser.parseString(body).getAsJsonObject();
       JsonArray requests = root.getAsJsonArray("requests");
@@ -157,7 +160,7 @@ public final class RemoteAppClient {
       return pending;
     } catch (IllegalStateException | JsonParseException exception) {
       throw new RemoteAppException("Invalid pending request response for app " + app.id(),
-          exception);
+          exception, statusCode);
     }
   }
 
