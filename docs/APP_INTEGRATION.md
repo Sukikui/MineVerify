@@ -63,7 +63,7 @@ MineVerify only needs the `requestId`; the other fields are for your app state.
 | Field           | Source       | Purpose                                                                      |
 |-----------------|--------------|------------------------------------------------------------------------------|
 | `requestId`     | **Your app** | Public verification id returned to MineVerify and received back in callbacks |
-| `appUserId`     | **Your app** | Your own user/account id, used to link the final Minecraft identity          |
+| `yourAppUserId`     | **Your app** | Your own user/account id, used to link the final Minecraft identity          |
 | `code`          | MineVerify   | Code received from `/api/mineverify/code-created`                            |
 | `expiresAt`     | MineVerify   | Expiration received from `/api/mineverify/code-created`                      |
 | `minecraftUuid` | MineVerify   | UUID received from `/api/mineverify/validated`                               |
@@ -74,7 +74,7 @@ MineVerify only needs the `requestId`; the other fields are for your app state.
 ```json
 {
   "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
-  "appUserId": "user_123",
+  "yourAppUserId": "user_123",
   "code": null,
   "expiresAt": null,
   "minecraftUuid": null,
@@ -165,7 +165,7 @@ How to handle it:
 - Find the request by `requestId`.
 - Ignore duplicate retries for the same validation.
 - Store `minecraftUuid`, `minecraftName`, and `validatedAt`.
-- Persist the `appUserId` <-> `minecraftUuid` link.
+- Persist the `yourAppUserId` <-> `minecraftUuid` link.
 
 ### 7. Implement `POST /api/mineverify/expired`
 
