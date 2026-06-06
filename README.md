@@ -12,7 +12,7 @@ MineVerify lets external apps verify that a Minecraft account is controlled by a
 your server.
 
 The app creates an internal verification request and asks the player to run `/mineverify`.
-MineVerify then polls configured apps, generates a temporary code, validates `/mineverify <code>`
+The plugin then polls configured apps, generates a temporary code, validates `/mineverify <code>`
 in game, and reports the verified Minecraft UUID and username back to the app.
 
 MineVerify only makes outbound requests to configured apps. It does not expose a public HTTP API on
@@ -79,33 +79,35 @@ linking:
 
 1. The app creates an internal request for its own user.
 2. The app asks the player to join the Minecraft server and run `/mineverify`.
-3. MineVerify starts a temporary polling session.
-4. MineVerify calls each configured app for pending requests.
-5. MineVerify generates a code for each new pending request and sends it to the owning app.
+3. **MineVerify** starts a temporary polling session.
+4. **MineVerify** calls each configured app for pending requests.
+5. **MineVerify** generates a code for each new pending request and sends it to the owning app.
 6. The app shows `/mineverify <code>` to the user.
 7. The player runs `/mineverify <code>` in game.
-8. MineVerify validates the code and reads the connected player's UUID and username.
-9. MineVerify reports either validation or expiration to the app.
+8. **MineVerify** validates the code and reads the connected player's UUID and username.
+9. **MineVerify** reports either validation or expiration to the app.
 
 ## 🔌 App Endpoints
 
-Apps configured in `config.yml` must implement these endpoints.
+It's always **MineVerify** that contacts the app, never the opposite.
+In this way, each app configured in `config.yml` must implement these endpoints on its own backend.
 
-| Endpoint | Method | Direction | Description |
-| --- | --- | --- | --- |
-| `/api/mineverify/pending-requests` | `GET` | MineVerify -> app | Returns app requests waiting for a generated code. |
-| `/api/mineverify/code-created` | `POST` | MineVerify -> app | Receives the generated code and expiration time. |
-| `/api/mineverify/validated` | `POST` | MineVerify -> app | Receives the verified Minecraft UUID and username. |
-| `/api/mineverify/expired` | `POST` | MineVerify -> app | Receives an expiration event when the code was not validated in time. |
+| Endpoint | Method | Description |
+| --- | --- | --- |
+| `/api/mineverify/pending-requests` | `GET` | Returns app requests waiting for a generated code. |
+| `/api/mineverify/code-created` | `POST` | Receives the generated code and expiration time. |
+| `/api/mineverify/validated` | `POST` | Receives the verified Minecraft UUID and username. |
+| `/api/mineverify/expired` | `POST` | Receives an expiration event when the code was not validated in time. |
 
-Every request sent by MineVerify includes:
+Every request sent by **MineVerify** includes:
 
 ```http
 Authorization: Bearer <app-token>
 ```
 
-Developers integrating MineVerify into their own app should follow
-[`docs/APP_INTEGRATION.md`](docs/APP_INTEGRATION.md).
+> [!IMPORTANT]
+> To fully integrate **MineVerify** into your app, follow
+> [`docs/APP_INTEGRATION.md`](docs/APP_INTEGRATION.md).
 
 ---
 
