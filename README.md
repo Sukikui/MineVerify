@@ -18,6 +18,8 @@ in game, and reports the verified Minecraft UUID and username back to the app.
 MineVerify only makes outbound requests to configured apps. It does not expose a public HTTP API on
 the Minecraft server.
 
+![Verification Flow](assets/verification-flow.png)
+
 ## ✨ Features
 
 - Verifies that a real connected Minecraft player owns a generated code
@@ -86,8 +88,6 @@ linking:
 7. The player runs `/mineverify <code>` in game.
 8. **MineVerify** validates the code and reads the connected player's UUID and username.
 9. **MineVerify** reports either validation or expiration to the app.
-
-![Verification Flow](assets/verification-flow.png)
 
 ## 🔌 App Endpoints
 
