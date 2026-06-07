@@ -87,6 +87,8 @@ linking:
 8. **MineVerify** validates the code and reads the connected player's UUID and username.
 9. **MineVerify** reports either validation or expiration to the app.
 
+![Verification Flow](assets/verification-flow.png)
+
 ## 🔌 App Endpoints
 
 It's always **MineVerify** that contacts the app, never the opposite.
