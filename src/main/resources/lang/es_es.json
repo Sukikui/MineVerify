@@ -2,6 +2,7 @@
   "usage": "Uso: /mineverify [code]",
   "player-only": "Este comando sólo puede usarlo un jugador conectado.",
   "invalid-code": "Este código de enlace no es válido o ha caducado.",
-  "polling-started": "Buscando solicitudes de verificación pendientes. La app se actualizará en breve.",
+  "polling-started": "Buscando una solicitud de verificación pendiente...",
+  "code-created": "Código de verificación enviado a %s.",
   "accepted": "Código aceptado para %s. La app se actualizará en breve."
 }

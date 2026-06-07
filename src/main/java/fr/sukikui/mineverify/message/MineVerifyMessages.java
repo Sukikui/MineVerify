@@ -77,6 +77,13 @@ public final class MineVerifyMessages {
   }
 
   /**
+   * Returns the generated code delivered message.
+   */
+  public String codeCreated(String appName) {
+    return String.format(Locale.ROOT, value("code-created"), appName);
+  }
+
+  /**
    * Returns the accepted code message.
    */
   public String accepted(String appName) {

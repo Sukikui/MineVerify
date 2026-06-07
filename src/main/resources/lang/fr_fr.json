@@ -2,6 +2,7 @@
   "usage": "Utilisation : /mineverify [code]",
   "player-only": "Cette commande ne peut être utilisée que par un joueur connecté.",
   "invalid-code": "Ce code de liaison est invalide ou expiré.",
-  "polling-started": "Recherche des demandes de vérification en attente. L'app sera mise à jour sous peu.",
+  "polling-started": "Recherche d’une demande de vérification en attente...",
+  "code-created": "Code de vérification envoyé à %s.",
   "accepted": "Code accepté pour %s. L'app sera mise à jour sous peu."
 }

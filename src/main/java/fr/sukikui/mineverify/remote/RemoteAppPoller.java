@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,7 +35,11 @@ public final class RemoteAppPoller {
   private final JavaPlugin plugin;
   private final Map<String, Instant> lastPendingPollByApp = new ConcurrentHashMap<>();
   private final Map<String, RemoteAppCallStatus> lastResponseByApp = new ConcurrentHashMap<>();
+  private final Map<String, UUID> codeNotificationPlayers = new ConcurrentHashMap<>();
+  private CodeCreatedNotifier codeCreatedNotifier = (playerId, app) -> {
+  };
   private BukkitTask task;
+  private volatile UUID triggerPlayerId;
 
   /**
    * Creates a remote app poller.
@@ -57,8 +62,13 @@ public final class RemoteAppPoller {
   /**
    * Starts the on-demand polling loop when it is not already running.
    */
-  public synchronized boolean trigger() {
-    if (config.apps().isEmpty() || task != null) {
+  public synchronized boolean trigger(UUID playerId) {
+    if (config.apps().isEmpty()) {
+      return false;
+    }
+
+    triggerPlayerId = Objects.requireNonNull(playerId, "playerId");
+    if (task != null) {
       return false;
     }
 
@@ -94,6 +104,7 @@ public final class RemoteAppPoller {
       int statusCode = remoteClient.sendCodeCreated(app, request);
       recordSuccess(app, CODE_CREATED_ENDPOINT, statusCode);
       request.markCodeCreatedReported();
+      notifyCodeCreated(request, app);
     } catch (RemoteAppException exception) {
       recordFailure(app, CODE_CREATED_ENDPOINT, exception);
       logRemoteFailure(app, "report MineVerify code", exception);
@@ -186,8 +197,13 @@ public final class RemoteAppPoller {
   private LinkRequest createRequest(PendingRemoteRequest pending) {
     Instant now = Instant.now();
     String code = codeGenerator.generate(candidate -> requestStore.hasActiveCode(candidate, now));
-    return requestStore.store(
+    LinkRequest request = requestStore.store(
         pending.appId(), pending.requestId(), code, now.plus(config.codeTtl()), now);
+    UUID playerId = triggerPlayerId;
+    if (playerId != null) {
+      codeNotificationPlayers.put(request.code(), playerId);
+    }
+    return request;
   }
 
   private void expirePendingRequests() {
@@ -232,6 +248,13 @@ public final class RemoteAppPoller {
    */
   public Map<String, RemoteAppConfig> apps() {
     return config.apps();
+  }
+
+  /**
+   * Sets the generated code delivery notifier.
+   */
+  public void setCodeCreatedNotifier(CodeCreatedNotifier codeCreatedNotifier) {
+    this.codeCreatedNotifier = Objects.requireNonNull(codeCreatedNotifier, "codeCreatedNotifier");
   }
 
   /**
@@ -304,6 +327,13 @@ public final class RemoteAppPoller {
             + " (operation=" + operation + ", url=" + url + ", cause="
             + exception.shortCause() + ")",
         exception);
+  }
+
+  private void notifyCodeCreated(LinkRequest request, RemoteAppConfig app) {
+    UUID playerId = codeNotificationPlayers.remove(request.code());
+    if (playerId != null) {
+      codeCreatedNotifier.notify(playerId, app);
+    }
   }
 
   private String endpointPath(String endpoint) {

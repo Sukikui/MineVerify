@@ -2,6 +2,7 @@
   "usage": "Usage: /mineverify [code]",
   "player-only": "This command can only be used by a connected player.",
   "invalid-code": "This link code is invalid or expired.",
-  "polling-started": "Checking for pending verification requests. The app will update shortly.",
+  "polling-started": "Looking for a pending verification request...",
+  "code-created": "Verification code sent to %s.",
   "accepted": "Code accepted for %s. The app will update shortly."
 }

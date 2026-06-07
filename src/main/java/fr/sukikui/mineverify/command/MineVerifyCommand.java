@@ -11,7 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Executor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -65,7 +67,7 @@ public final class MineVerifyCommand implements TabExecutor {
     }
 
     if (args.length == 0) {
-      poller.trigger();
+      poller.trigger(player.getUniqueId());
       messenger.sendPollingStarted(sender);
       return true;
     }
@@ -85,6 +87,16 @@ public final class MineVerifyCommand implements TabExecutor {
     messenger.sendAccepted(sender, appName(request.get()));
     asyncExecutor.execute(() -> poller.reportValidation(request.get()));
     return true;
+  }
+
+  /**
+   * Sends generated code delivery feedback to a connected player.
+   */
+  public void sendCodeCreated(UUID playerId, String appName) {
+    Player player = Bukkit.getPlayer(playerId);
+    if (player != null) {
+      messenger.sendCodeCreated(player, appName);
+    }
   }
 
   @Override

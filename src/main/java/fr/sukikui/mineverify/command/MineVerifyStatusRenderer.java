@@ -45,7 +45,7 @@ public final class MineVerifyStatusRenderer {
    */
   public void sendStatus(CommandSender sender, boolean includeRequests) {
     final Instant now = Instant.now();
-    sendLine(sender, "§b§lStatus");
+    sendLine(sender, "§bStatus");
     sendLine(sender, LABEL + "Polling: " + pollingState());
     sendLine(sender, LABEL + "Configured apps: " + VALUE + poller.apps().size());
     sendLine(sender, LABEL + "Stored requests: " + VALUE + requestStore.size());
@@ -61,7 +61,7 @@ public final class MineVerifyStatusRenderer {
    * Sends an admin permission error.
    */
   public void sendNoPermission(CommandSender sender) {
-    sendLine(sender, BAD + "§lError: " + BAD + "You do not have permission to use this command.");
+    sendLine(sender, BAD + "Error: You do not have permission to use this command.");
   }
 
   /**

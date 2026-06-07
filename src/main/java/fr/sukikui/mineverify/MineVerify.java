@@ -56,5 +56,8 @@ public final class MineVerify extends JavaPlugin {
         Objects.requireNonNull(getCommand("mineverify"), "Command mineverify not defined");
     command.setExecutor(commandHandler);
     command.setTabCompleter(commandHandler);
+    poller.setCodeCreatedNotifier(
+        (playerId, app) -> getServer().getScheduler().runTask(
+            this, () -> commandHandler.sendCodeCreated(playerId, app.name())));
   }
 }
