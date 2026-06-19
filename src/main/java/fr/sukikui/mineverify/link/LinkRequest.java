@@ -18,7 +18,6 @@ public final class LinkRequest {
   private UUID minecraftUuid;
   private String minecraftName;
   private Instant validatedAt;
-  private Instant expiredAt;
   private boolean codeCreatedReported;
   private boolean validationReported;
   private boolean expirationReported;
@@ -74,11 +73,20 @@ public final class LinkRequest {
    */
   public synchronized boolean expireIfNeeded(Instant now) {
     if (state == LinkRequestState.PENDING_VALIDATION && isExpired(now)) {
-      expiredAt = expiresAt;
-      state = LinkRequestState.EXPIRED;
-      return true;
+      return expire();
     }
     return false;
+  }
+
+  /**
+   * Expires a pending request immediately.
+   */
+  public synchronized boolean expire() {
+    if (state != LinkRequestState.PENDING_VALIDATION) {
+      return false;
+    }
+    state = LinkRequestState.EXPIRED;
+    return true;
   }
 
   /**
@@ -142,13 +150,6 @@ public final class LinkRequest {
    */
   public synchronized Optional<Instant> validatedAt() {
     return Optional.ofNullable(validatedAt);
-  }
-
-  /**
-   * Returns the expiration timestamp once the request has expired.
-   */
-  public synchronized Optional<Instant> expiredAt() {
-    return Optional.ofNullable(expiredAt);
   }
 
   /**

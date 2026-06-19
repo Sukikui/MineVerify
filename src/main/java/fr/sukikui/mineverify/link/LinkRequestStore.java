@@ -156,6 +156,28 @@ public final class LinkRequestStore {
     return new ArrayList<>(requestsByCode.values());
   }
 
+  /**
+   * Expires pending requests and returns every report still required before shutdown.
+   */
+  public synchronized List<LinkRequest> prepareShutdownReports() {
+    List<LinkRequest> reports = new ArrayList<>();
+    for (LinkRequest request : requestsByCode.values()) {
+      request.expire();
+      if (request.needsValidationReport() || request.needsExpirationReport()) {
+        reports.add(request);
+      }
+    }
+    return reports;
+  }
+
+  /**
+   * Removes every request from memory.
+   */
+  public synchronized void clear() {
+    requestsByCode.clear();
+    codeByRemoteRequest.clear();
+  }
+
   private static String remoteKey(String appId, String requestId) {
     return appId + '\n' + requestId;
   }

@@ -62,7 +62,6 @@ public final class RemoteAppClient {
   public int sendCodeCreated(RemoteAppConfig app, LinkRequest request)
       throws RemoteAppException {
     JsonObject payload = new JsonObject();
-    payload.addProperty("appId", request.appId());
     payload.addProperty("requestId", request.requestId());
     payload.addProperty("code", request.code());
     payload.addProperty("expiresAt", DateTimeFormatter.ISO_INSTANT.format(request.expiresAt()));
@@ -76,7 +75,6 @@ public final class RemoteAppClient {
   public int sendValidated(RemoteAppConfig app, LinkRequest request)
       throws RemoteAppException {
     JsonObject payload = new JsonObject();
-    payload.addProperty("appId", request.appId());
     payload.addProperty("requestId", request.requestId());
     payload.addProperty("code", request.code());
     payload.addProperty("minecraftUuid", required(request.minecraftUuid(), "minecraftUuid"));
@@ -93,12 +91,8 @@ public final class RemoteAppClient {
   public int sendExpired(RemoteAppConfig app, LinkRequest request)
       throws RemoteAppException {
     JsonObject payload = new JsonObject();
-    payload.addProperty("appId", request.appId());
     payload.addProperty("requestId", request.requestId());
     payload.addProperty("code", request.code());
-    payload.addProperty("expiresAt", DateTimeFormatter.ISO_INSTANT.format(request.expiresAt()));
-    payload.addProperty("expiredAt", DateTimeFormatter.ISO_INSTANT.format(
-        request.expiredAt().orElse(request.expiresAt())));
 
     return postJson(app, EXPIRED_PATH, payload, "send expiration");
   }
