@@ -13,46 +13,6 @@ public final class RemoteAppException extends Exception {
   private final String url;
 
   /**
-   * Creates a remote app communication error.
-   */
-  public RemoteAppException(String message) {
-    super(message);
-    statusCode = null;
-    operation = "";
-    url = "";
-  }
-
-  /**
-   * Creates a remote app communication error with an HTTP status code.
-   */
-  public RemoteAppException(String message, int statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-    operation = "";
-    url = "";
-  }
-
-  /**
-   * Creates a remote app communication error with a cause.
-   */
-  public RemoteAppException(String message, Throwable cause) {
-    super(message, cause);
-    statusCode = null;
-    operation = "";
-    url = "";
-  }
-
-  /**
-   * Creates a remote app communication error with a cause and HTTP status code.
-   */
-  public RemoteAppException(String message, Throwable cause, int statusCode) {
-    super(message, cause);
-    this.statusCode = statusCode;
-    operation = "";
-    url = "";
-  }
-
-  /**
    * Creates a remote app communication error with request metadata.
    */
   public RemoteAppException(String message, Throwable cause, String operation, String url) {

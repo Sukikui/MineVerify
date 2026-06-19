@@ -5,7 +5,6 @@ import fr.sukikui.mineverify.config.RemoteAppConfig;
 import fr.sukikui.mineverify.link.LinkCodeGenerator;
 import fr.sukikui.mineverify.link.LinkRequest;
 import fr.sukikui.mineverify.link.LinkRequestStore;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
@@ -32,12 +31,12 @@ public final class RemoteAppPoller {
   private final RemoteAppClient remoteClient;
   private final Logger logger;
   private final JavaPlugin plugin;
-  private final Map<String, Instant> lastPendingPollByApp = new ConcurrentHashMap<>();
-  private final Map<String, RemoteAppCallStatus> lastResponseByApp = new ConcurrentHashMap<>();
+  private final RemoteAppStatusTracker statusTracker;
   private final Map<String, UUID> codeNotificationPlayers = new ConcurrentHashMap<>();
   private CodeCreatedNotifier codeCreatedNotifier = (playerId, app) -> {
   };
   private BukkitTask task;
+  private boolean shuttingDown;
   private volatile UUID triggerPlayerId;
 
   /**
@@ -56,13 +55,14 @@ public final class RemoteAppPoller {
     this.remoteClient = Objects.requireNonNull(remoteClient, "remoteClient");
     this.plugin = Objects.requireNonNull(plugin, "plugin");
     this.logger = Objects.requireNonNull(logger, "logger");
+    statusTracker = new RemoteAppStatusTracker(config);
   }
 
   /**
    * Starts the on-demand polling loop when it is not already running.
    */
   public synchronized boolean trigger(UUID playerId) {
-    if (config.apps().isEmpty()) {
+    if (shuttingDown || config.apps().isEmpty()) {
       return false;
     }
 
@@ -71,7 +71,7 @@ public final class RemoteAppPoller {
       return false;
     }
 
-    lastPendingPollByApp.clear();
+    statusTracker.clearPollTimes();
     task =
         plugin
             .getServer()
@@ -91,9 +91,20 @@ public final class RemoteAppPoller {
   }
 
   /**
+   * Stops polling and waits for any active remote operation to finish.
+   */
+  public synchronized void stopForShutdown() {
+    shuttingDown = true;
+    stop();
+  }
+
+  /**
    * Reports a generated code to its owning app.
    */
-  public void reportCodeCreated(LinkRequest request) {
+  public synchronized void reportCodeCreated(LinkRequest request) {
+    if (shuttingDown) {
+      return;
+    }
     RemoteAppConfig app = config.apps().get(request.appId());
     if (app == null || !request.needsCodeCreatedReport()) {
       return;
@@ -101,11 +112,13 @@ public final class RemoteAppPoller {
 
     try {
       int statusCode = remoteClient.sendCodeCreated(app, request);
-      recordSuccess(app, CODE_CREATED_ENDPOINT, statusCode);
+      statusTracker.recordSuccess(
+          app, CODE_CREATED_ENDPOINT, RemoteAppClient.CODE_CREATED_PATH, statusCode);
       request.markCodeCreatedReported();
       notifyCodeCreated(request, app);
     } catch (RemoteAppException exception) {
-      recordFailure(app, CODE_CREATED_ENDPOINT, exception);
+      statusTracker.recordFailure(
+          app, CODE_CREATED_ENDPOINT, RemoteAppClient.CODE_CREATED_PATH, exception);
       RemoteAppFailureLogger.log(logger, app, "report MineVerify code", exception);
     }
   }
@@ -113,7 +126,10 @@ public final class RemoteAppPoller {
   /**
    * Reports a validated request to its owning app.
    */
-  public void reportValidation(LinkRequest request) {
+  public synchronized void reportValidation(LinkRequest request) {
+    if (shuttingDown) {
+      return;
+    }
     RemoteAppConfig app = config.apps().get(request.appId());
     if (app == null || !request.needsValidationReport()) {
       return;
@@ -121,10 +137,12 @@ public final class RemoteAppPoller {
 
     try {
       int statusCode = remoteClient.sendValidated(app, request);
-      recordSuccess(app, VALIDATED_ENDPOINT, statusCode);
+      statusTracker.recordSuccess(
+          app, VALIDATED_ENDPOINT, RemoteAppClient.VALIDATED_PATH, statusCode);
       request.markValidationReported();
     } catch (RemoteAppException exception) {
-      recordFailure(app, VALIDATED_ENDPOINT, exception);
+      statusTracker.recordFailure(
+          app, VALIDATED_ENDPOINT, RemoteAppClient.VALIDATED_PATH, exception);
       RemoteAppFailureLogger.log(logger, app, "report MineVerify validation", exception);
     }
   }
@@ -132,7 +150,10 @@ public final class RemoteAppPoller {
   /**
    * Reports an expired request to its owning app.
    */
-  public void reportExpiration(LinkRequest request) {
+  public synchronized void reportExpiration(LinkRequest request) {
+    if (shuttingDown) {
+      return;
+    }
     RemoteAppConfig app = config.apps().get(request.appId());
     if (app == null || !request.needsExpirationReport()) {
       return;
@@ -140,18 +161,23 @@ public final class RemoteAppPoller {
 
     try {
       int statusCode = remoteClient.sendExpired(app, request);
-      recordSuccess(app, EXPIRED_ENDPOINT, statusCode);
+      statusTracker.recordSuccess(
+          app, EXPIRED_ENDPOINT, RemoteAppClient.EXPIRED_PATH, statusCode);
       request.markExpirationReported();
     } catch (RemoteAppException exception) {
-      recordFailure(app, EXPIRED_ENDPOINT, exception);
+      statusTracker.recordFailure(
+          app, EXPIRED_ENDPOINT, RemoteAppClient.EXPIRED_PATH, exception);
       RemoteAppFailureLogger.log(logger, app, "report MineVerify expiration", exception);
     }
   }
 
-  private void pollAll() {
+  private synchronized void pollAll() {
+    if (shuttingDown) {
+      return;
+    }
     Instant now = Instant.now();
     for (RemoteAppConfig app : config.apps().values()) {
-      if (shouldPollPendingRequests(app, now)) {
+      if (statusTracker.shouldPoll(app, now)) {
         pollPendingRequests(app);
       }
     }
@@ -168,23 +194,22 @@ public final class RemoteAppPoller {
   private void pollPendingRequests(RemoteAppConfig app) {
     try {
       PendingRemoteRequests pendingRequests = remoteClient.fetchPendingRequests(app);
-      recordSuccess(app, PENDING_REQUESTS_ENDPOINT, pendingRequests.statusCode());
+      statusTracker.recordSuccess(
+          app,
+          PENDING_REQUESTS_ENDPOINT,
+          RemoteAppClient.PENDING_REQUESTS_PATH,
+          pendingRequests.statusCode());
       for (PendingRemoteRequest pending : pendingRequests.requests()) {
         findOrCreateRequest(pending);
       }
     } catch (RemoteAppException exception) {
-      recordFailure(app, PENDING_REQUESTS_ENDPOINT, exception);
+      statusTracker.recordFailure(
+          app,
+          PENDING_REQUESTS_ENDPOINT,
+          RemoteAppClient.PENDING_REQUESTS_PATH,
+          exception);
       RemoteAppFailureLogger.log(logger, app, "poll MineVerify app", exception);
     }
-  }
-
-  private boolean shouldPollPendingRequests(RemoteAppConfig app, Instant now) {
-    Instant lastPoll = lastPendingPollByApp.get(app.id());
-    if (lastPoll != null && Duration.between(lastPoll, now).compareTo(app.pollInterval()) < 0) {
-      return false;
-    }
-    lastPendingPollByApp.put(app.id(), now);
-    return true;
   }
 
   private LinkRequest findOrCreateRequest(PendingRemoteRequest pending) {
@@ -267,53 +292,21 @@ public final class RemoteAppPoller {
    * Returns the last pending-request poll time for one app.
    */
   public Optional<Instant> lastPendingPoll(String appId) {
-    return Optional.ofNullable(lastPendingPollByApp.get(appId));
+    return statusTracker.lastPendingPoll(appId);
   }
 
   /**
    * Returns when the next pending-request poll can run for one app.
    */
   public Optional<Instant> nextPendingPoll(String appId, Instant now) {
-    RemoteAppConfig app = config.apps().get(appId);
-    if (app == null) {
-      return Optional.empty();
-    }
-
-    Instant lastPoll = lastPendingPollByApp.get(appId);
-    if (lastPoll == null) {
-      return Optional.of(now);
-    }
-
-    Instant nextPoll = lastPoll.plus(app.pollInterval());
-    if (nextPoll.isBefore(now)) {
-      return Optional.of(now);
-    }
-    return Optional.of(nextPoll);
+    return statusTracker.nextPendingPoll(appId, now);
   }
 
   /**
    * Returns the last outbound call result for one app.
    */
   public Optional<RemoteAppCallStatus> lastResponse(String appId) {
-    return Optional.ofNullable(lastResponseByApp.get(appId));
-  }
-
-  private void recordSuccess(RemoteAppConfig app, String endpoint, int statusCode) {
-    lastResponseByApp.put(
-        app.id(),
-        RemoteAppCallStatus.success(
-            endpoint, statusCode, app.endpoint(endpointPath(endpoint)), Instant.now()));
-  }
-
-  private void recordFailure(RemoteAppConfig app, String endpoint, RemoteAppException exception) {
-    lastResponseByApp.put(
-        app.id(),
-        RemoteAppCallStatus.failure(
-            endpoint,
-            exception.statusCode(),
-            exception.shortCause(),
-            exception.url().orElse(app.endpoint(endpointPath(endpoint))),
-            Instant.now()));
+    return statusTracker.lastResponse(appId);
   }
 
   private void notifyCodeCreated(LinkRequest request, RemoteAppConfig app) {
@@ -323,13 +316,4 @@ public final class RemoteAppPoller {
     }
   }
 
-  private String endpointPath(String endpoint) {
-    return switch (endpoint) {
-      case PENDING_REQUESTS_ENDPOINT -> RemoteAppClient.PENDING_REQUESTS_PATH;
-      case CODE_CREATED_ENDPOINT -> RemoteAppClient.CODE_CREATED_PATH;
-      case VALIDATED_ENDPOINT -> RemoteAppClient.VALIDATED_PATH;
-      case EXPIRED_ENDPOINT -> RemoteAppClient.EXPIRED_PATH;
-      default -> "";
-    };
-  }
 }

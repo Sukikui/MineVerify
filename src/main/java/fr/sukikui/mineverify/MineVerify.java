@@ -44,7 +44,7 @@ public final class MineVerify extends JavaPlugin {
   @Override
   public void onDisable() {
     if (poller != null) {
-      poller.stop();
+      poller.stopForShutdown();
     }
     if (shutdownHandler != null) {
       shutdownHandler.reportAndClear();

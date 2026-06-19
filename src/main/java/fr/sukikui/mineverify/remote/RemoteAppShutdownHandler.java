@@ -80,10 +80,12 @@ public final class RemoteAppShutdownHandler {
     try {
       if (request.needsValidationReport()) {
         remoteClient.sendValidated(app, request);
+        return true;
       } else if (request.needsExpirationReport()) {
         remoteClient.sendExpired(app, request);
+        return true;
       }
-      return true;
+      return false;
     } catch (RemoteAppException exception) {
       RemoteAppFailureLogger.log(logger, app, "report MineVerify shutdown request", exception);
       return false;
