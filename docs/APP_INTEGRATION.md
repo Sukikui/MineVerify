@@ -124,7 +124,6 @@ Payload sent by MineVerify:
 
 ```json
 {
-  "appId": "my-app",
   "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
   "code": "K7M9-P2Q4",
   "expiresAt": "2026-06-04T16:05:00Z"
@@ -151,7 +150,6 @@ Payload sent by MineVerify:
 
 ```json
 {
-  "appId": "my-app",
   "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
   "code": "K7M9-P2Q4",
   "minecraftUuid": "6f8f5771-8ec8-4b8d-bc40-8cbe2f84f5a3",
@@ -173,7 +171,6 @@ Payload sent by MineVerify:
 
 ```json
 {
-  "appId": "my-app",
   "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
   "code": "K7M9-P2Q4",
   "expiresAt": "2026-06-04T16:05:00Z",
