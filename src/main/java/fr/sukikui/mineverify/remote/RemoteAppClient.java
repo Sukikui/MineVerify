@@ -94,8 +94,6 @@ public final class RemoteAppClient {
     payload.addProperty("requestId", request.requestId());
     payload.addProperty("code", request.code());
     payload.addProperty("expiresAt", DateTimeFormatter.ISO_INSTANT.format(request.expiresAt()));
-    payload.addProperty("expiredAt", DateTimeFormatter.ISO_INSTANT.format(
-        request.expiredAt().orElse(request.expiresAt())));
 
     return postJson(app, EXPIRED_PATH, payload, "send expiration");
   }

@@ -69,7 +69,6 @@ MineVerify only needs the `requestId`; the other fields are for your app state.
 | `minecraftUuid` | MineVerify   | UUID received from `/api/mineverify/validated`                               |
 | `minecraftName` | MineVerify   | Player name received from `/api/mineverify/validated`                        |
 | `validatedAt`   | MineVerify   | Validation time received from `/api/mineverify/validated`                    |
-| `expiredAt`     | MineVerify   | Expiration time received from `/api/mineverify/expired`                      |
 
 ```json
 {
@@ -79,8 +78,7 @@ MineVerify only needs the `requestId`; the other fields are for your app state.
   "expiresAt": null,
   "minecraftUuid": null,
   "minecraftName": null,
-  "validatedAt": null,
-  "expiredAt": null
+  "validatedAt": null
 }
 ```
 
@@ -98,7 +96,6 @@ Return requests where:
 
 - `code` is null
 - `validatedAt` is null
-- `expiredAt` is null
 
 ```json
 {
@@ -138,7 +135,8 @@ How to handle it:
 
 ### 5. Show the code command
 
-Show this while `code` exists and neither `validatedAt` nor `expiredAt` exists.
+Show this after receiving the code and until the request is validated or MineVerify reports its
+expiration.
 
 ```text
 /mineverify K7M9-P2Q4
@@ -173,8 +171,7 @@ Payload sent by MineVerify:
 {
   "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
   "code": "K7M9-P2Q4",
-  "expiresAt": "2026-06-04T16:05:00Z",
-  "expiredAt": "2026-06-04T16:05:00Z"
+  "expiresAt": "2026-06-04T16:05:00Z"
 }
 ```
 
@@ -182,4 +179,4 @@ How to handle it:
 
 - Find the request by `requestId`.
 - Ignore duplicate retries for the same expiration.
-- Store `expiresAt` and `expiredAt`.
+- Mark the request as expired or remove it.
