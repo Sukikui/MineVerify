@@ -73,10 +73,20 @@ public final class LinkRequest {
    */
   public synchronized boolean expireIfNeeded(Instant now) {
     if (state == LinkRequestState.PENDING_VALIDATION && isExpired(now)) {
-      state = LinkRequestState.EXPIRED;
-      return true;
+      return expire();
     }
     return false;
+  }
+
+  /**
+   * Expires a pending request immediately.
+   */
+  public synchronized boolean expire() {
+    if (state != LinkRequestState.PENDING_VALIDATION) {
+      return false;
+    }
+    state = LinkRequestState.EXPIRED;
+    return true;
   }
 
   /**

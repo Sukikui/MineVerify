@@ -107,6 +107,26 @@ class LinkRequestStoreTest {
     assertEquals(Optional.empty(), store.findByRemoteRequest("my-app", "request-1"));
   }
 
+  @Test
+  void preparesPendingAndValidatedReportsForShutdown() {
+    LinkRequestStore store = new LinkRequestStore();
+    LinkRequest pending = store.store("my-app", "request-1", "K7M9-P2Q4", later(), NOW);
+    LinkRequest validated = store.store("my-app", "request-2", "H8Q2-L7MN", later(), NOW);
+    validated.validate(PLAYER_UUID, "PlayerName", NOW.plusSeconds(10));
+
+    List<LinkRequest> reports = store.prepareShutdownReports();
+
+    assertTrue(reports.contains(pending));
+    assertTrue(reports.contains(validated));
+    assertEquals(LinkRequestState.EXPIRED, pending.state());
+    assertTrue(pending.needsExpirationReport());
+    assertEquals(LinkRequestState.VALIDATED, validated.state());
+    assertTrue(validated.needsValidationReport());
+
+    store.clear();
+    assertEquals(0, store.size());
+  }
+
   private static Instant later() {
     return NOW.plusSeconds(300);
   }

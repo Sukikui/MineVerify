@@ -6,6 +6,7 @@ import fr.sukikui.mineverify.link.LinkCodeGenerator;
 import fr.sukikui.mineverify.link.LinkRequestStore;
 import fr.sukikui.mineverify.remote.RemoteAppClient;
 import fr.sukikui.mineverify.remote.RemoteAppPoller;
+import fr.sukikui.mineverify.remote.RemoteAppShutdownHandler;
 import java.net.http.HttpClient;
 import java.util.Objects;
 import org.bukkit.command.PluginCommand;
@@ -18,6 +19,7 @@ public final class MineVerify extends JavaPlugin {
 
   private LinkRequestStore requestStore;
   private RemoteAppPoller poller;
+  private RemoteAppShutdownHandler shutdownHandler;
 
   @Override
   public void onEnable() {
@@ -30,6 +32,7 @@ public final class MineVerify extends JavaPlugin {
 
     poller = new RemoteAppPoller(config, requestStore, codeGenerator, remoteClient, this,
         getLogger());
+    shutdownHandler = new RemoteAppShutdownHandler(config, requestStore, remoteClient, getLogger());
 
     registerCommand(config);
 
@@ -42,6 +45,9 @@ public final class MineVerify extends JavaPlugin {
   public void onDisable() {
     if (poller != null) {
       poller.stop();
+    }
+    if (shutdownHandler != null) {
+      shutdownHandler.reportAndClear();
     }
   }
 

@@ -165,13 +165,14 @@ How to handle it:
 
 ### 7. Implement `POST /api/mineverify/expired`
 
+MineVerify sends this event when a code expires or the Minecraft server shuts down gracefully.
+
 Payload sent by MineVerify:
 
 ```json
 {
   "requestId": "018f4f58-6fb7-7f65-bd2a-8a6f7c83f8e1",
-  "code": "K7M9-P2Q4",
-  "expiresAt": "2026-06-04T16:05:00Z"
+  "code": "K7M9-P2Q4"
 }
 ```
 

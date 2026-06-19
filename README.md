@@ -27,6 +27,7 @@ the Minecraft server.
 - Keeps the Minecraft server private by using outbound app calls only
 - Sends the app the verified Minecraft UUID and username after validation
 - Expires unused codes automatically
+- Expires pending verifications during graceful server shutdowns
 - Provides admin status commands to inspect current verification activity
 - Supports localized in-game messages
 
@@ -99,7 +100,7 @@ In this way, each app configured in `config.yml` must implement these endpoints 
 | `/api/mineverify/pending-requests` | `GET` | Returns app requests waiting for a generated code. |
 | `/api/mineverify/code-created` | `POST` | Receives the generated code and expiration time. |
 | `/api/mineverify/validated` | `POST` | Receives the verified Minecraft UUID and username. |
-| `/api/mineverify/expired` | `POST` | Receives an expiration event when the code was not validated in time. |
+| `/api/mineverify/expired` | `POST` | Receives an expiration event for an unused code or a graceful server shutdown. |
 
 Every request sent by **MineVerify** includes:
 

@@ -12,7 +12,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -107,7 +106,7 @@ public final class RemoteAppPoller {
       notifyCodeCreated(request, app);
     } catch (RemoteAppException exception) {
       recordFailure(app, CODE_CREATED_ENDPOINT, exception);
-      logRemoteFailure(app, "report MineVerify code", exception);
+      RemoteAppFailureLogger.log(logger, app, "report MineVerify code", exception);
     }
   }
 
@@ -126,7 +125,7 @@ public final class RemoteAppPoller {
       request.markValidationReported();
     } catch (RemoteAppException exception) {
       recordFailure(app, VALIDATED_ENDPOINT, exception);
-      logRemoteFailure(app, "report MineVerify validation", exception);
+      RemoteAppFailureLogger.log(logger, app, "report MineVerify validation", exception);
     }
   }
 
@@ -145,7 +144,7 @@ public final class RemoteAppPoller {
       request.markExpirationReported();
     } catch (RemoteAppException exception) {
       recordFailure(app, EXPIRED_ENDPOINT, exception);
-      logRemoteFailure(app, "report MineVerify expiration", exception);
+      RemoteAppFailureLogger.log(logger, app, "report MineVerify expiration", exception);
     }
   }
 
@@ -175,7 +174,7 @@ public final class RemoteAppPoller {
       }
     } catch (RemoteAppException exception) {
       recordFailure(app, PENDING_REQUESTS_ENDPOINT, exception);
-      logRemoteFailure(app, "poll MineVerify app", exception);
+      RemoteAppFailureLogger.log(logger, app, "poll MineVerify app", exception);
     }
   }
 
@@ -315,18 +314,6 @@ public final class RemoteAppPoller {
             exception.shortCause(),
             exception.url().orElse(app.endpoint(endpointPath(endpoint))),
             Instant.now()));
-  }
-
-  private void logRemoteFailure(
-      RemoteAppConfig app, String action, RemoteAppException exception) {
-    String operation = exception.operation().orElse("unknown operation");
-    String url = exception.url().orElse(app.baseUrl());
-    logger.log(
-        Level.WARNING,
-        "Unable to " + action + " " + app.id()
-            + " (operation=" + operation + ", url=" + url + ", cause="
-            + exception.shortCause() + ")",
-        exception);
   }
 
   private void notifyCodeCreated(LinkRequest request, RemoteAppConfig app) {
