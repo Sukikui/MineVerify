@@ -28,7 +28,7 @@ public final class RemoteAppClient {
   static final String CODE_CREATED_PATH = "/api/mineverify/code-created";
   static final String VALIDATED_PATH = "/api/mineverify/validated";
   static final String EXPIRED_PATH = "/api/mineverify/expired";
-  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(3);
 
   private final HttpClient httpClient;
   private final Gson gson = new Gson();

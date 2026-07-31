@@ -73,7 +73,7 @@ linking:
 | --- | --- | --- |
 | `language` | `en_us` | In-game message language. Available values are listed in `config.yml`. |
 | `apps.<id>.name` | `<id>` | Player-facing app name. |
-| `apps.<id>.base-url` | Required | App backend base URL. |
+| `apps.<id>.base-url` | Required | Full app backend URL, starting with `http://` or `https://`. |
 | `apps.<id>.token` | Required | Bearer token used by MineVerify when calling this app. |
 | `apps.<id>.poll-interval-seconds` | `3` | Poll interval used only during an active player-triggered polling session. |
 | `linking.code-ttl-seconds` | `60` | Generated code validity duration. |

@@ -5,6 +5,7 @@ language: "en_us"
 apps:
   my-app:
     name: "Your App"
+    # Must be a full URL starting with http:// or https://.
     base-url: "https://your-app.com"
     token: "generated-token-from-your-app"
     # Interval used only during an active player-triggered polling session.

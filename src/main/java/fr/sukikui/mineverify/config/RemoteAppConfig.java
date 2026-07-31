@@ -1,7 +1,9 @@
 package fr.sukikui.mineverify.config;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
@@ -43,7 +45,23 @@ public final class RemoteAppConfig {
    * Returns true when the app has enough settings to be polled.
    */
   public boolean isUsable() {
-    return !id.isBlank() && !baseUrl.isBlank() && !token.isBlank();
+    return unusableReason().isEmpty();
+  }
+
+  /**
+   * Returns why this app cannot be used.
+   */
+  public Optional<String> unusableReason() {
+    if (id.isBlank()) {
+      return Optional.of("missing app id");
+    }
+    if (baseUrl.isBlank()) {
+      return Optional.of("missing base-url");
+    }
+    if (token.isBlank()) {
+      return Optional.of("missing token");
+    }
+    return invalidBaseUrlReason(baseUrl);
   }
 
   /**
@@ -94,6 +112,25 @@ public final class RemoteAppConfig {
       trimmed = trimmed.substring(0, trimmed.length() - 1);
     }
     return trimmed;
+  }
+
+  private static Optional<String> invalidBaseUrlReason(String value) {
+    try {
+      URI uri = URI.create(value);
+      String scheme = Objects.requireNonNullElse(uri.getScheme(), "");
+      if (!scheme.equals("http") && !scheme.equals("https")) {
+        return Optional.of("base-url must start with http:// or https://");
+      }
+      if (uri.getHost() == null || uri.getHost().isBlank()) {
+        return Optional.of("base-url must include a host");
+      }
+      if (uri.getRawQuery() != null || uri.getRawFragment() != null) {
+        return Optional.of("base-url must not include query or fragment");
+      }
+      return Optional.empty();
+    } catch (IllegalArgumentException exception) {
+      return Optional.of("base-url is not a valid URL");
+    }
   }
 
   private static String string(ConfigurationSection section, String path) {

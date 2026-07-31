@@ -40,6 +40,21 @@ class MineVerifyConfigTest {
     MineVerifyConfig config = MineVerifyConfig.load(yaml);
 
     assertTrue(config.apps().isEmpty());
+    assertEquals(1, config.ignoredApps().size());
+  }
+
+  @Test
+  void ignoresAppsWithInvalidBaseUrl() {
+    YamlConfiguration yaml = new YamlConfiguration();
+    yaml.set("apps.local.base-url", "localhost:3000");
+    yaml.set("apps.local.token", "token");
+
+    MineVerifyConfig config = MineVerifyConfig.load(yaml);
+
+    assertTrue(config.apps().isEmpty());
+    assertEquals("local", config.ignoredApps().getFirst().id());
+    assertEquals("base-url must start with http:// or https://",
+        config.ignoredApps().getFirst().reason());
   }
 
   @Test
