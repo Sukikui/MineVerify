@@ -24,6 +24,9 @@ apps:
     poll-interval-seconds: 3
 ```
 
+`base-url` must start with `http://` or `https://`. Use `http://127.0.0.1:3000` only for local
+testing, and the public app URL in production.
+
 ## 🌐 App Side Requirements
 
 ### Token

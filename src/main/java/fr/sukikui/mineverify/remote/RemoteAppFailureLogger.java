@@ -5,7 +5,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Logs outbound app failures with request context and stacktrace.
+ * Logs outbound app state changes with request context.
  */
 public final class RemoteAppFailureLogger {
 
@@ -19,11 +19,15 @@ public final class RemoteAppFailureLogger {
       Logger logger, RemoteAppConfig app, String action, RemoteAppException exception) {
     String operation = exception.operation().orElse("unknown operation");
     String url = exception.url().orElse(app.baseUrl());
-    logger.log(
-        Level.WARNING,
-        "Unable to " + action + " " + app.id()
-            + " (operation=" + operation + ", url=" + url + ", cause="
-            + exception.shortCause() + ")",
-        exception);
+    logger.warning("Unable to " + action + " " + app.id()
+        + " (operation=" + operation + ", url=" + url + ", cause="
+        + exception.shortCause() + ")");
+  }
+
+  /**
+   * Logs when a remote app responds again after a failure.
+   */
+  public static void logRecovered(Logger logger, RemoteAppConfig app) {
+    logger.log(Level.INFO, "MineVerify app " + app.id() + " is reachable again.");
   }
 }

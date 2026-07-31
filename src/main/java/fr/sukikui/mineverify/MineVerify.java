@@ -1,6 +1,7 @@
 package fr.sukikui.mineverify;
 
 import fr.sukikui.mineverify.command.MineVerifyCommand;
+import fr.sukikui.mineverify.config.IgnoredRemoteApp;
 import fr.sukikui.mineverify.config.MineVerifyConfig;
 import fr.sukikui.mineverify.link.LinkCodeGenerator;
 import fr.sukikui.mineverify.link.LinkRequestStore;
@@ -35,6 +36,7 @@ public final class MineVerify extends JavaPlugin {
     shutdownHandler = new RemoteAppShutdownHandler(config, requestStore, remoteClient, getLogger());
 
     registerCommand(config);
+    logIgnoredApps(config);
 
     if (config.apps().isEmpty()) {
       getLogger().warning("No MineVerify apps configured. Verification polling is disabled.");
@@ -65,5 +67,11 @@ public final class MineVerify extends JavaPlugin {
     poller.setCodeCreatedNotifier(
         (playerId, app) -> getServer().getScheduler().runTask(
             this, () -> commandHandler.sendCodeCreated(playerId, app.name())));
+  }
+
+  private void logIgnoredApps(MineVerifyConfig config) {
+    for (IgnoredRemoteApp app : config.ignoredApps()) {
+      getLogger().warning("Ignoring MineVerify app " + app.id() + ": " + app.reason() + ".");
+    }
   }
 }

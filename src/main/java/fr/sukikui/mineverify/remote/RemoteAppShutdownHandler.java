@@ -8,6 +8,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -54,10 +56,11 @@ public final class RemoteAppShutdownHandler {
         + " unfinished verification request(s) before shutdown...");
     final long startedAt = System.nanoTime();
     AtomicInteger delivered = new AtomicInteger();
+    Set<String> loggedFailures = ConcurrentHashMap.newKeySet();
     ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     for (LinkRequest request : reports) {
       executor.submit(() -> {
-        if (report(request)) {
+        if (report(request, loggedFailures)) {
           delivered.incrementAndGet();
         }
       });
@@ -69,11 +72,10 @@ public final class RemoteAppShutdownHandler {
     requestStore.clear();
   }
 
-  private boolean report(LinkRequest request) {
+  private boolean report(LinkRequest request, Set<String> loggedFailures) {
     RemoteAppConfig app = config.apps().get(request.appId());
     if (app == null) {
-      logger.warning("Unable to report MineVerify shutdown request: unknown app "
-          + request.appId());
+      logUnknownApp(request, loggedFailures);
       return false;
     }
 
@@ -87,8 +89,23 @@ public final class RemoteAppShutdownHandler {
       }
       return false;
     } catch (RemoteAppException exception) {
-      RemoteAppFailureLogger.log(logger, app, "report MineVerify shutdown request", exception);
+      logFailure(app, exception, loggedFailures);
       return false;
+    }
+  }
+
+  private void logUnknownApp(LinkRequest request, Set<String> loggedFailures) {
+    if (loggedFailures.add("unknown-app:" + request.appId())) {
+      logger.warning("Unable to report MineVerify shutdown request: unknown app "
+          + request.appId());
+    }
+  }
+
+  private void logFailure(
+      RemoteAppConfig app, RemoteAppException exception, Set<String> loggedFailures) {
+    String key = app.id() + ":" + exception.shortCause();
+    if (loggedFailures.add(key)) {
+      RemoteAppFailureLogger.log(logger, app, "report MineVerify shutdown request", exception);
     }
   }
 
