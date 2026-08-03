@@ -120,6 +120,12 @@ tasks.register('printProjectName') {
     }
 }
 
+tasks.register('printMinecraftVersion') {
+    doLast {
+        println minecraftVersion
+    }
+}
+
 tasks.register('release') {
     dependsOn build
 
