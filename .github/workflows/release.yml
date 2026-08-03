@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
       - name: ☕ Setup JDK
         uses: actions/setup-java@v5.6.0
@@ -19,13 +19,33 @@ jobs:
           java-version: '25'
 
       - name: 🐘 Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v6.2.0
 
       - name: 🛠 Build with Gradle
         run: ./gradlew build --stacktrace
 
       - name: 📦 Capture build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: Artifacts
           path: build/libs/
+
+      - name: 🚀 Upload artifacts to Modrinth and GitHub
+        uses: Kir-Antipov/mc-publish@v3.3.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+          modrinth-id: 6HP0Xz4w
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: true
+
+          files: build/libs/!(*-@(dev|sources|all)).jar
+          version-type: release
+          loaders: paper
+
+      - name: 📝 Sync Modrinth description from README
+        uses: funnyboy-roks/modrinth-auto-desc@v1.7
+        with:
+          auth-token: ${{ secrets.MODRINTH_TOKEN }}
+          slug: 6HP0Xz4w
+          readme: README.md
