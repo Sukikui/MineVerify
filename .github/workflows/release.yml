@@ -24,6 +24,10 @@ jobs:
       - name: 🛠 Build with Gradle
         run: ./gradlew build --stacktrace
 
+      - name: 🎮 Read Minecraft version
+        id: minecraft
+        run: echo "version=$(./gradlew -q printMinecraftVersion)" >> "$GITHUB_OUTPUT"
+
       - name: 📦 Capture build artifacts
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -41,7 +45,8 @@ jobs:
 
           files: build/libs/!(*-@(dev|sources|all)).jar
           version-type: release
-          loaders: paper
+          loaders: paper purpur spigot
+          game-versions: ${{ steps.minecraft.outputs.version }}
 
       - name: 📝 Sync Modrinth description from README
         uses: funnyboy-roks/modrinth-auto-desc@v1.7
